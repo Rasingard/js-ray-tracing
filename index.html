@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            background-color: rgb(1, 1, 1);
+            height: 100%;
+            widows: 100%;
+        }
+
+        #logData {
+            font-family: 'Courier New', Courier, monospace;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 99;
+            color: #ccc;
+            font-size: 10px;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        #logData span,
+        #viewData span {
+            width: 50px;
+            background-color: rgba(0,0,0,0.3);
+            padding: 2px;
+        }
+
+        #viewData {
+            font-family: 'Courier New', Courier, monospace;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            z-index: 99;
+            color: #ccc;
+            font-size: 10px;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        #cross {
+            top: 50%;
+            left: 50%;
+            margin-left: -2px;
+            margin-top: -2px;
+            position: fixed;
+            height: 4px;
+            width: 4px;
+            background-color: rgba(0, 255, 0, 0.8);
+            z-index: 99;
+            border-radius: 4px;
+        }
+    </style>
+
+    <script src="data/heightMap.js"></script>
+    <script src="data/textures.js"></script>
+
+    <script src="init.js"></script>
+    <script src="lib/core/Color.js"></script>
+    <script src="lib/core/Point.js"></script>
+    <script src="lib/core/SpaceObject.js"></script>
+    <script src="lib/core/Vector.js"></script>
+    <script src="lib/core/Quaternion.js"></script>
+    <script src="lib/core/Line.js"></script>
+    <script src="lib/core/Matrix.js"></script>
+    <script src="lib/core/Map.js"></script>
+    <script src="lib/core/Octree.js"></script>
+    <script src="lib/core/Viewport.js"></script>
+    <script src="lib/core/Material.js"></script>
+    <script src="lib/core/Renderer.js"></script>
+    <script src="lib/core/Shader.js"></script>
+    <script src="lib/core/Texture.js"></script>
+    <script src="lib/core/RayData.js"></script>
+
+    <script src="lib/Camera.js"></script>
+    <script src="lib/InputManager.js"></script>
+    <script src="data/WorldGenerator.js"></script>
+</head>
+
+<body>
+    <div id="logData"></div>
+    <div id="viewData"></div>
+    <div id="cross"></div>
+</body>
+
+<script>
+    const VIEWPORT = new Viewport();
+    const GENERATOR = new WorldGenerator();
+    const IMPUT_MANAGER = new InputManager();
+
+    // Create Camera
+    const CAMERA = new Camera(
+        new Point(0, 0, 0),
+        CAMERA_FOV,
+    );
+    CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
+
+    const SPACE3D = GENERATOR.build(2048, 64, 2048, () => {
+        const CAMERAX = SPACE3D.getX() / 2;
+        const CAMERAZ = SPACE3D.getZ() / 2;
+
+        for (let j = 0, lenJ = SPACE3D.getY(); j < lenJ; j++) {
+            if (!SPACE3D.getAt(CAMERAX, j, CAMERAZ)) {
+                CAMERAY = j + 0.5;
+                CAMERA.location.x = CAMERAX;
+                CAMERA.location.y = CAMERAY;
+                CAMERA.location.z = CAMERAZ;
+                break;
+            };
+        }
+
+        let inputReady = true;
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'r') start();
+
+            if (event.key === 'Shift') toggleSpeed = !toggleSpeed;
+
+            if (event.key === 'e' && inputReady) { 
+                addPressed = true;
+                inputReady = false;
+                setTimeout(() => {
+                    inputReady = true;
+                }, 300);
+            };
+
+            if (event.key === 'q' && lastLocation) currentMaterial = lastLocation.getMaterial().index;
+
+            if (event.key === '-') ZOOM = Math.min(ZOOM + 2, 90);
+            if (event.key === '=') ZOOM = Math.max(ZOOM - 2, 10);
+        }, false);
+    });
+    const SUN = Vector.fromPoints(new Point(0, 0, 0), new Point(-2, -1, -2)).normalize();
+    let AMBIENT_LIGHT = 0.25;
+    let ATMOSPHERE_COLOR = new Color(11, 216, 255);
+    /*
+    let current = 0, to = 1, perc = 0;
+    const DAYNIGHT_COLORS = [
+        new Color(102, 150, 186),
+        new Color(226, 227, 139),
+        new Color(231, 165, 83),
+        new Color(126, 75, 104),
+        new Color(41, 41, 101),
+    ];
+
+    setInterval(() => {
+        perc += 0.01;
+
+        if(perc > 1) {
+            perc = 0;
+            current = to;
+            to += 1;
+
+            if(to > 4) to = 0;
+        }
+
+        ATMOSPHERE_COLOR = DAYNIGHT_COLORS[current].getCopy().blend(DAYNIGHT_COLORS[to], perc);
+        SUN.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 1), 360 / 10000));
+    }, 100);
+    */
+    const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
+    let GAME_TIME = 0;
+    let FPS = 1;
+    let FRAME_TIME = 0;
+    let FRAME_DURATION = 0;
+    let ZOOM = CAMERA_FOV;
+
+    function statistics(camera, space) {
+        const spaceScale = space.getDimensions();
+        document.getElementById('logData').innerHTML = `
+            <span>FPS: ${FPS} FT: ${FRAME_TIME} FD: ${FRAME_DURATION}</span>
+            <span>CAM x: ${camera.location.x.toFixed(2)} y: ${camera.location.y.toFixed(2)} z: ${camera.location.z.toFixed(2)}</span>
+            <span>VEC: x: ${camera.axis.z.x.toFixed(2)} y: ${camera.axis.z.y.toFixed(2)} z: ${camera.axis.z.z.toFixed(2)}</span>
+            <span>TIME: ${GAME_TIME}</span>
+        `;
+
+        document.getElementById('viewData').innerHTML = `
+            <span>RS: ${ADAPTATIVE_RENDER_SCALE.toFixed(2)}</span>
+            <span>H: ${window.innerHeight}</span>
+            <span>W: ${window.innerWidth}</span>
+        `;
+    }
+
+    let toggleSpeed = false;
+    function input() {
+        let totalSpeed = CAMERA_SPEED * FRAME_DURATION / 1000;
+        let totalRotationSpeed = ROTATION_SPEED * FRAME_DURATION / 1000;
+
+        if(toggleSpeed) {
+            totalSpeed *= 10;
+            totalRotationSpeed *= 10;
+        }
+
+        let tempX = CAMERA.location.x;
+        let tempY = CAMERA.location.y;
+        let tempZ = CAMERA.location.z;
+
+        if (!IMPUT_MANAGER.keyPressed('a') && IMPUT_MANAGER.keyPressed('d')) {
+            tempX += CAMERA.axis.x.x * totalSpeed;
+            tempY += CAMERA.axis.x.y * totalSpeed;
+            tempZ += CAMERA.axis.x.z * totalSpeed;
+        }
+
+        if (IMPUT_MANAGER.keyPressed('a') && !IMPUT_MANAGER.keyPressed('d')) {
+            tempX -= CAMERA.axis.x.x * totalSpeed;
+            tempY -= CAMERA.axis.x.y * totalSpeed;
+            tempZ -= CAMERA.axis.x.z * totalSpeed;
+        }
+
+        if (IMPUT_MANAGER.keyPressed('w')) {
+            tempX += CAMERA.axis.z.x * totalSpeed;
+            tempY += CAMERA.axis.z.y * totalSpeed;
+            tempZ += CAMERA.axis.z.z * totalSpeed;
+        };
+        if (IMPUT_MANAGER.keyPressed('s')) {
+            tempX -= CAMERA.axis.z.x * totalSpeed;
+            tempY -= CAMERA.axis.z.y * totalSpeed;
+            tempZ -= CAMERA.axis.z.z * totalSpeed;
+        }
+
+        if (IMPUT_MANAGER.keyPressed(' ')) {
+            tempY += totalSpeed;
+        }
+
+        if (IMPUT_MANAGER.keyPressed('Control')) {
+            tempY -= totalSpeed;
+        }
+
+        if (SPACE3D.in(tempX, tempY, tempZ) && !SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ))) {
+            CAMERA.location.x = tempX;
+            CAMERA.location.y = tempY;
+            CAMERA.location.z = tempZ;
+        };
+
+        if (IMPUT_MANAGER.keyPressed('ArrowLeft')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -totalRotationSpeed));
+        if (IMPUT_MANAGER.keyPressed('ArrowRight')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), totalRotationSpeed));
+        if (IMPUT_MANAGER.keyPressed('ArrowUp')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.axis.x, -totalRotationSpeed));
+        if (IMPUT_MANAGER.keyPressed('ArrowDown')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.axis.x, totalRotationSpeed));
+    }
+
+    function sleep(timeMS) {
+        return new Promise(resolve => setTimeout(resolve, timeMS));
+    }
+
+    let lastLocation = null;
+    let addPressed = false;
+    const materialIndex = 0;
+    let currentMaterial = materialIndex;
+    function gameLogic(camera, map) {
+        if(lastLocation) map.setAt(
+            lastLocation.getFaceVoxel().x,
+            lastLocation.getFaceVoxel().y,
+            lastLocation.getFaceVoxel().z,
+            false
+        );
+
+        if(addPressed && lastLocation) {
+            addPressed = false;
+            
+            map.setAt(
+                lastLocation.getFaceVoxel().x,
+                lastLocation.getFaceVoxel().y,
+                lastLocation.getFaceVoxel().z,
+                currentMaterial
+            );
+        }
+        
+        lastLocation = map.rayTrace(camera.location, camera.axis.z, RENDER_DISTANCE);
+
+        if(lastLocation) {
+            Point.distance(camera.location, lastLocation.getTarget());
+
+            map.setAt(
+                lastLocation.getFaceVoxel().x,
+                lastLocation.getFaceVoxel().y,
+                lastLocation.getFaceVoxel().z,
+                materialIndex
+            )
+        };
+    }
+
+    let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
+    // const rendererWorker = BUILD_WORKER(RENDERER_WORKER);
+    // rendererWorker.postMessage('Teste Worker!');
+
+    async function start() {
+        if (IMPUT_MANAGER.keyPressed('Escape')) return;
+
+        const frameStart = Date.now();
+        //start: BODY
+        try {
+            input(CAMERA, SPACE3D);
+            statistics(CAMERA, SPACE3D);
+            //gameLogic(CAMERA, SPACE3D);
+            VIEWPORT.updateView(
+                    CAMERA.render(
+                        SPACE3D,
+                        Math.round(VIEWPORT.height * ADAPTATIVE_RENDER_SCALE),
+                        Math.round(VIEWPORT.width * ADAPTATIVE_RENDER_SCALE),
+                        ZOOM,
+                        RENDER_DISTANCE,
+                    ),
+                0,
+                0,
+            );
+        } catch (err) {
+            console.log(err);
+        }
+
+        //end: BODY
+        FRAME_TIME = Date.now() - frameStart;
+
+        if(ADAPTATIVE_RESOLUTION && Math.abs(FPS - TARGET_FPS) > 10) {
+            if(FPS >= TARGET_FPS && ADAPTATIVE_RENDER_SCALE >= 1) {
+                await sleep(TARGET_FRAME_TIME - FRAME_TIME);
+            } else if (FPS > TARGET_FPS) {
+                ADAPTATIVE_RENDER_SCALE = Math.min(ADAPTATIVE_RENDER_SCALE + 0.05, 1);
+            } else {
+                ADAPTATIVE_RENDER_SCALE = Math.max(ADAPTATIVE_RENDER_SCALE - 0.05, 0.1);
+            }
+        }
+
+        FRAME_DURATION = Date.now() - frameStart;
+        FPS = Math.round(1000 / FRAME_DURATION);
+        GAME_TIME += FRAME_DURATION; // Update GAME_TIME after frame sleep
+        window.requestAnimationFrame(start);
+    }
+</script>
+
+</html>
