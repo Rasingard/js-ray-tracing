@@ -137,31 +137,17 @@
     const SUN = Vector.fromPoints(new Point(0, 0, 0), new Point(-2, -1, -2)).normalize();
     let AMBIENT_LIGHT = 0.25;
     let ATMOSPHERE_COLOR = new Color(11, 216, 255);
-    /*
-    let current = 0, to = 1, perc = 0;
-    const DAYNIGHT_COLORS = [
-        new Color(102, 150, 186),
-        new Color(226, 227, 139),
-        new Color(231, 165, 83),
-        new Color(126, 75, 104),
-        new Color(41, 41, 101),
-    ];
 
+    // Day/Night
     setInterval(() => {
-        perc += 0.01;
+        SUN.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 100));
+        SUN.normalize();
 
-        if(perc > 1) {
-            perc = 0;
-            current = to;
-            to += 1;
+        AMBIENT_LIGHT = 0.25 + (SUN.y * 0.2 * - 1);
 
-            if(to > 4) to = 0;
-        }
-
-        ATMOSPHERE_COLOR = DAYNIGHT_COLORS[current].getCopy().blend(DAYNIGHT_COLORS[to], perc);
-        SUN.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 1), 360 / 10000));
+        ATMOSPHERE_COLOR = (new Color(11, 216, 255)).blend(new Color(0, 0, 0), SUN.y);
     }, 100);
-    */
+
     const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
     let GAME_TIME = 0;
     let FPS = 1;
