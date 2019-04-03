@@ -105,8 +105,8 @@
     );
     CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
 
-    // const rendererWorker = BUILD_WORKER(RENDERER_WORKER);
-    // rendererWorker.postMessage(`${document.location.protocol}//${document.location.host}`);
+    const rendererWorker = BUILD_WORKER(RENDERER_WORKER);
+    rendererWorker.postMessage(`${document.location.protocol}//${document.location.host}`);
     
     const SPACE3D = GENERATOR.build(2048, 64, 2048, () => {
         const CAMERAX = SPACE3D.getX() / 2;
@@ -142,11 +142,9 @@
             if (event.key === '=') ZOOM = Math.max(ZOOM - 2, 10);
         }, false);
 
-        /*
         rendererWorker.postMessage({
             materials: SPACE3D.getBuffers(),
         });
-        */
     });
 
     // Day/Night

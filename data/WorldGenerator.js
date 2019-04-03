@@ -4,34 +4,40 @@ class WorldGenerator {
 
     build(x, y, z, ready) {
         const _3DSPACE = new Map(x, y, z);
-        _3DSPACE.addMaterial(
-            new Material(
-                new Color(0, 0, 0)
-            )
-        );
-
-        _3DSPACE.addMaterial(
-            new Material(
-                new Color(112, 112, 112)
-            )
-        );
 
         this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
+            
+            const t1 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
+            const t2 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 1, 16));
+            const t3 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 2, 16));
+            const t4 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 3, 16));
+            const t5 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 12, 14, 16));
+
+            const m1 = _3DSPACE.addMaterial(new Color(0, 0, 0), t5, t5, t5);
+            const m2 = _3DSPACE.addMaterial(new Color(112, 112, 112), t5, t5, t5);
+            const m3 = _3DSPACE.addMaterial(new Color(23, 37, 16), t1, t4, t3);
+            const m4 = _3DSPACE.addMaterial(new Color(60, 60, 60), t2, t2, t2);
+            const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5);
+
+            /*
+            _3DSPACE.addMaterial(
+                new Material(
+                    new Color(0, 0, 0)
+                )
+            );
+    
+            _3DSPACE.addMaterial(
+                new Material(
+                    new Color(112, 112, 112)
+                )
+            );
+
             _3DSPACE.addMaterial(
                 new Material(
                     new Color(23, 37, 16),
                     this.getTyleTexture(tilesData, 0, 0, 16),
                     this.getTyleTexture(tilesData, 0, 3, 16),
                     this.getTyleTexture(tilesData, 0, 2, 16),
-                )
-            );
-
-            _3DSPACE.addMaterialBuffer(
-                new Material(
-                    new Color(23, 37, 16),
-                    _3DSPACE.addTextureBuffer(this.getTyleBuffer(tilesData, 0, 0, 16)),
-                    _3DSPACE.addTextureBuffer(this.getTyleBuffer(tilesData, 0, 0, 16)),
-                    _3DSPACE.addTextureBuffer(this.getTyleBuffer(tilesData, 0, 0, 16)),
                 )
             );
 
@@ -48,6 +54,7 @@ class WorldGenerator {
                     this.getTyleTexture(tilesData, 12, 14, 16),
                 )
             );
+            */
 
             this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
                 // Set ground
@@ -56,9 +63,9 @@ class WorldGenerator {
                         const height = imageData.data[((k*imageData.width + i) * 4)] / 4;
                         for(let j = 0; j < height; j++) {
                             if(j > height - 2) {
-                                _3DSPACE.setAt(i,j,k, 2); // default material 2
+                                _3DSPACE.setAt(i,j,k, m3); // default material 2
                             } else {
-                                _3DSPACE.setAt(i,j,k, 3); // default material 3
+                                _3DSPACE.setAt(i,j,k, m4); // default material 3
                             }
                         }
                     }
@@ -68,7 +75,7 @@ class WorldGenerator {
                 for (let i = 0; i < x; i++) {
                     for (let k = 0; k < z; k++) {
                         for(let j = 0; j < 3; j++) {
-                            if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, 4); // default material 4
+                            if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m5); // default material 4
                         }
                     }
                 }
@@ -111,7 +118,7 @@ class WorldGenerator {
     }
 
     getTyleBuffer(imageData, ix, iy, tileSize) {
-        const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize));
+        const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize * 4));
         (new DataView(buffer)).setUint16(0, tileSize); // set image size
         const tileData = new Uint8ClampedArray(buffer, 2);
 
