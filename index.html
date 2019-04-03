@@ -76,6 +76,11 @@
     <script src="lib/core/Shader.js"></script>
     <script src="lib/core/Texture.js"></script>
     <script src="lib/core/RayData.js"></script>
+    <script src="lib/core/Lights.js"></script>
+
+    <script src="lib/core/buffer/BufferList.js"></script>
+    <script src="lib/core/buffer/MaterialList.js"></script>
+    <script src="lib/core/buffer/TextureList.js"></script>
 
     <script src="lib/Camera.js"></script>
     <script src="lib/InputManager.js"></script>
@@ -100,6 +105,9 @@
     );
     CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
 
+    // const rendererWorker = BUILD_WORKER(RENDERER_WORKER);
+    // rendererWorker.postMessage(`${document.location.protocol}//${document.location.host}`);
+    
     const SPACE3D = GENERATOR.build(2048, 64, 2048, () => {
         const CAMERAX = SPACE3D.getX() / 2;
         const CAMERAZ = SPACE3D.getZ() / 2;
@@ -133,20 +141,34 @@
             if (event.key === '-') ZOOM = Math.min(ZOOM + 2, 90);
             if (event.key === '=') ZOOM = Math.max(ZOOM - 2, 10);
         }, false);
+
+        /*
+        rendererWorker.postMessage({
+            materials: SPACE3D.getBuffers(),
+        });
+        */
     });
-    const SUN = Vector.fromPoints(new Point(0, 0, 0), new Point(-2, -1, -2)).normalize();
-    let AMBIENT_LIGHT = 0.25;
-    let ATMOSPHERE_COLOR = new Color(11, 216, 255);
 
     // Day/Night
+    /*
+    const sun = SPACE3D.getGlobalLights()[0];
+    const sunBaseIntensity = sun.intensity;
+    const ambientLight = SPACE3D.getAmbientLight();
+    const baseAmbientLightColor = ambientLight.color.getCopy();
+    const ambientLightBaseIntensity = ambientLight.intensity;
+
     setInterval(() => {
-        SUN.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 100));
-        SUN.normalize();
+        const av = Math.abs(sun.direction.y) * 0.25;
+        sun.direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 100));
+        sun.direction.normalize();
+        ambientLight.color = (baseAmbientLightColor.getCopy()).blend(new Color(0, 0, 0), 1 - av);
+        if(sun.direction.y < 0) {
+            sun.intensity = Math.abs(sun.direction.y) * 0.75
+        }
 
-        AMBIENT_LIGHT = 0.25 + (SUN.y * 0.2 * - 1);
-
-        ATMOSPHERE_COLOR = (new Color(11, 216, 255)).blend(new Color(0, 0, 0), SUN.y);
-    }, 100);
+        ambientLight.intensity = Math.max(av, 0.25);        
+    }, 200);
+    */
 
     const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
     let GAME_TIME = 0;
@@ -270,9 +292,6 @@
     }
 
     let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
-    // const rendererWorker = BUILD_WORKER(RENDERER_WORKER);
-    // rendererWorker.postMessage('Teste Worker!');
-
     async function start() {
         if (IMPUT_MANAGER.keyPressed('Escape')) return;
 

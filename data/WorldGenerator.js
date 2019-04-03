@@ -26,6 +26,15 @@ class WorldGenerator {
                 )
             );
 
+            _3DSPACE.addMaterialBuffer(
+                new Material(
+                    new Color(23, 37, 16),
+                    _3DSPACE.addTextureBuffer(this.getTyleBuffer(tilesData, 0, 0, 16)),
+                    _3DSPACE.addTextureBuffer(this.getTyleBuffer(tilesData, 0, 0, 16)),
+                    _3DSPACE.addTextureBuffer(this.getTyleBuffer(tilesData, 0, 0, 16)),
+                )
+            );
+
             _3DSPACE.addMaterial(
                 new Material(
                     new Color(60, 60, 60),
@@ -39,8 +48,6 @@ class WorldGenerator {
                     this.getTyleTexture(tilesData, 12, 14, 16),
                 )
             );
-
-            _3DSPACE.addTexture(this.getTyleData(tilesData, 12, 14, 16));
 
             this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
                 // Set ground
@@ -103,20 +110,27 @@ class WorldGenerator {
         return tileData;
     }
 
-    getTyleTexture(imageData, ix, iy, tileSize) {
-        const tileData = new ImageData(tileSize, tileSize);
+    getTyleBuffer(imageData, ix, iy, tileSize) {
+        const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize));
+        (new DataView(buffer)).setUint16(0, tileSize); // set image size
+        const tileData = new Uint8ClampedArray(buffer, 2);
+
         let oi, ci;
         for(let x = 0; x < tileSize; x++) {
             for(let y = 0; y < tileSize; y++) {
                 oi = Math.floor(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
                 ci = Math.floor((y * tileSize + x) * 4);
-                tileData.data[ci] = imageData.data[oi];
-                tileData.data[ci + 1] = imageData.data[oi + 1];
-                tileData.data[ci + 2] = imageData.data[oi + 2];
-                tileData.data[ci + 3] = imageData.data[oi + 3];
+                tileData[ci] = imageData.data[oi];
+                tileData[ci + 1] = imageData.data[oi + 1];
+                tileData[ci + 2] = imageData.data[oi + 2];
+                tileData[ci + 3] = imageData.data[oi + 3];
             }
         }
 
-        return new Texture(tileData);
+        return buffer;
+    }
+
+    getTyleTexture(imageData, ix, iy, tileSize) {
+        return new Texture(this.getTyleData(imageData, ix, iy, tileSize));
     }
 }
