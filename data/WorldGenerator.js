@@ -19,43 +19,6 @@ class WorldGenerator {
             const m4 = _3DSPACE.addMaterial(new Color(60, 60, 60), t2, t2, t2);
             const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5);
 
-            /*
-            _3DSPACE.addMaterial(
-                new Material(
-                    new Color(0, 0, 0)
-                )
-            );
-    
-            _3DSPACE.addMaterial(
-                new Material(
-                    new Color(112, 112, 112)
-                )
-            );
-
-            _3DSPACE.addMaterial(
-                new Material(
-                    new Color(23, 37, 16),
-                    this.getTyleTexture(tilesData, 0, 0, 16),
-                    this.getTyleTexture(tilesData, 0, 3, 16),
-                    this.getTyleTexture(tilesData, 0, 2, 16),
-                )
-            );
-
-            _3DSPACE.addMaterial(
-                new Material(
-                    new Color(60, 60, 60),
-                    this.getTyleTexture(tilesData, 0, 1, 16),
-                )
-            );
-
-            _3DSPACE.addMaterial(
-                new Material(
-                    new Color(30, 30, 160),
-                    this.getTyleTexture(tilesData, 12, 14, 16),
-                )
-            );
-            */
-
             this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
                 // Set ground
                 for (let i = 0; i < x; i++) {
@@ -63,9 +26,9 @@ class WorldGenerator {
                         const height = imageData.data[((k*imageData.width + i) * 4)] / 4;
                         for(let j = 0; j < height; j++) {
                             if(j > height - 2) {
-                                _3DSPACE.setAt(i,j,k, m3); // default material 2
+                                _3DSPACE.setAt(i,j,k, m2);
                             } else {
-                                _3DSPACE.setAt(i,j,k, m4); // default material 3
+                                _3DSPACE.setAt(i,j,k, m3);
                             }
                         }
                     }
@@ -75,7 +38,7 @@ class WorldGenerator {
                 for (let i = 0; i < x; i++) {
                     for (let k = 0; k < z; k++) {
                         for(let j = 0; j < 3; j++) {
-                            if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m5); // default material 4
+                            if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
                         }
                     }
                 }

@@ -78,9 +78,20 @@
     <script src="lib/core/RayData.js"></script>
     <script src="lib/core/Lights.js"></script>
 
-    <script src="lib/core/buffer/BufferList.js"></script>
-    <script src="lib/core/buffer/MaterialList.js"></script>
-    <script src="lib/core/buffer/TextureList.js"></script>
+    <script src="lib/core/buffer/point/PointViewer.js"></script>
+    <script src="lib/core/buffer/point/PointView.js"></script>
+    <script src="lib/core/buffer/vector/VectorViewer.js"></script>
+    <script src="lib/core/buffer/vector/VectorView.js"></script>
+    <script src="lib/core/buffer/color/ColorViewer.js"></script>
+    <script src="lib/core/buffer/color/ColorView.js"></script>
+    <script src="lib/core/buffer/texture/TextureList.js"></script>
+    <script src="lib/core/buffer/texture/TextureListView.js"></script>
+    <script src="lib/core/buffer/texture/TextureView.js"></script>
+    <script src="lib/core/buffer/material/MaterialList.js"></script>
+    <script src="lib/core/buffer/material/MaterialListView.js"></script>
+    <script src="lib/core/buffer/material/MaterialView.js"></script>
+    <script src="lib/core/buffer/material/MaterialViewer.js"></script>
+    <script src="lib/core/buffer/CameraView.js"></script>
 
     <script src="lib/Camera.js"></script>
     <script src="lib/InputManager.js"></script>
@@ -99,14 +110,45 @@
     const IMPUT_MANAGER = new InputManager();
 
     // Create Camera
-    const CAMERA = new Camera(
-        new Point(0, 0, 0),
-        CAMERA_FOV,
-    );
+    const CAMERA_BUFFER = new SharedArrayBuffer(257);
+    const CAMERA_VIEW = new DataView(CAMERA_BUFFER);
+    const CAMERA = new CameraView(CAMERA_VIEW, CAMERA_FOV);
     CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
 
-    const rendererWorker = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker.postMessage(`${document.location.protocol}//${document.location.host}`);
+    const workerStream = (worker) => {
+        return new Promise((resolve, reject) => {
+            const workerResponse = () => {
+                worker.removeEventListener('message', workerResponse, false);
+                resolve();
+            }
+            worker.addEventListener('message', workerResponse, false);
+            worker.postMessage(true);
+        });
+    }
+
+    const rendererWorker1 = BUILD_WORKER(RENDERER_WORKER);
+    rendererWorker1.postMessage(`${document.location.protocol}//${document.location.host}`);
+    worker1reponded = false;
+    worker1Response = () => {}
+    rendererWorker1.addEventListener('message', worker1Response, false);
+
+    const rendererWorker2 = BUILD_WORKER(RENDERER_WORKER);
+    rendererWorker2.postMessage(`${document.location.protocol}//${document.location.host}`);
+    worker1reponded = false;
+    worker1Response = () => {}
+    rendererWorker2.addEventListener('message', worker1Response, false);
+
+    const rendererWorker3 = BUILD_WORKER(RENDERER_WORKER);
+    rendererWorker3.postMessage(`${document.location.protocol}//${document.location.host}`);
+    worker1reponded = false;
+    worker1Response = () => {}
+    rendererWorker3.addEventListener('message', worker1Response, false);
+
+    const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
+    rendererWorker4.postMessage(`${document.location.protocol}//${document.location.host}`);
+    worker1reponded = false;
+    worker1Response = () => {}
+    rendererWorker4.addEventListener('message', worker1Response, false);
     
     const SPACE3D = GENERATOR.build(2048, 64, 2048, () => {
         const CAMERAX = SPACE3D.getX() / 2;
@@ -115,9 +157,9 @@
         for (let j = 0, lenJ = SPACE3D.getY(); j < lenJ; j++) {
             if (!SPACE3D.getAt(CAMERAX, j, CAMERAZ)) {
                 CAMERAY = j + 0.5;
-                CAMERA.location.x = CAMERAX;
-                CAMERA.location.y = CAMERAY;
-                CAMERA.location.z = CAMERAZ;
+                CAMERA.location.setX(CAMERAX);
+                CAMERA.location.setY(CAMERAY);
+                CAMERA.location.setZ(CAMERAZ);
                 break;
             };
         }
@@ -142,9 +184,29 @@
             if (event.key === '=') ZOOM = Math.max(ZOOM - 2, 10);
         }, false);
 
-        rendererWorker.postMessage({
-            materials: SPACE3D.getBuffers(),
-        });
+        const baseWorkerConfig = {
+            map: SPACE3D.getBuffers(),
+            camera: { 
+                camera: CAMERA_BUFFER,
+                fov: CAMERA_FOV,
+            },
+            viewBuffer: VIEWPORT.getBuffer(),
+            height: VIEWPORT.height,
+            width: VIEWPORT.width,
+            zoom: ZOOM,
+            renderDistance: RENDER_DISTANCE,
+            sx: 0,
+            sy: 0,
+        };
+
+        rendererWorker1.postMessage(baseWorkerConfig);
+        baseWorkerConfig.sy = 1;
+        rendererWorker2.postMessage(baseWorkerConfig);
+        baseWorkerConfig.sy = 0;
+        baseWorkerConfig.sx = 1;
+        rendererWorker3.postMessage(baseWorkerConfig);
+        baseWorkerConfig.sy = 1;
+        rendererWorker4.postMessage(baseWorkerConfig);
     });
 
     // Day/Night
@@ -179,8 +241,8 @@
         const spaceScale = space.getDimensions();
         document.getElementById('logData').innerHTML = `
             <span>FPS: ${FPS} FT: ${FRAME_TIME} FD: ${FRAME_DURATION}</span>
-            <span>CAM x: ${camera.location.x.toFixed(2)} y: ${camera.location.y.toFixed(2)} z: ${camera.location.z.toFixed(2)}</span>
-            <span>VEC: x: ${camera.axis.z.x.toFixed(2)} y: ${camera.axis.z.y.toFixed(2)} z: ${camera.axis.z.z.toFixed(2)}</span>
+            <span>CAM x: ${camera.location.getX().toFixed(2)} y: ${camera.location.getY().toFixed(2)} z: ${camera.location.getZ().toFixed(2)}</span>
+            <span>VEC: x: ${camera.zAxis.getX().toFixed(2)} y: ${camera.zAxis.getY().toFixed(2)} z: ${camera.zAxis.getZ().toFixed(2)}</span>
             <span>TIME: ${GAME_TIME}</span>
         `;
 
@@ -201,31 +263,31 @@
             totalRotationSpeed *= 10;
         }
 
-        let tempX = CAMERA.location.x;
-        let tempY = CAMERA.location.y;
-        let tempZ = CAMERA.location.z;
+        let tempX = CAMERA.location.getX();
+        let tempY = CAMERA.location.getY();
+        let tempZ = CAMERA.location.getZ();
 
         if (!IMPUT_MANAGER.keyPressed('a') && IMPUT_MANAGER.keyPressed('d')) {
-            tempX += CAMERA.axis.x.x * totalSpeed;
-            tempY += CAMERA.axis.x.y * totalSpeed;
-            tempZ += CAMERA.axis.x.z * totalSpeed;
+            tempX += CAMERA.xAxis.getX() * totalSpeed;
+            tempY += CAMERA.xAxis.getY() * totalSpeed;
+            tempZ += CAMERA.xAxis.getZ() * totalSpeed;
         }
 
         if (IMPUT_MANAGER.keyPressed('a') && !IMPUT_MANAGER.keyPressed('d')) {
-            tempX -= CAMERA.axis.x.x * totalSpeed;
-            tempY -= CAMERA.axis.x.y * totalSpeed;
-            tempZ -= CAMERA.axis.x.z * totalSpeed;
+            tempX -= CAMERA.xAxis.getX() * totalSpeed;
+            tempY -= CAMERA.xAxis.getY() * totalSpeed;
+            tempZ -= CAMERA.xAxis.getZ() * totalSpeed;
         }
 
         if (IMPUT_MANAGER.keyPressed('w')) {
-            tempX += CAMERA.axis.z.x * totalSpeed;
-            tempY += CAMERA.axis.z.y * totalSpeed;
-            tempZ += CAMERA.axis.z.z * totalSpeed;
+            tempX += CAMERA.zAxis.getX() * totalSpeed;
+            tempY += CAMERA.zAxis.getY() * totalSpeed;
+            tempZ += CAMERA.zAxis.getZ() * totalSpeed;
         };
         if (IMPUT_MANAGER.keyPressed('s')) {
-            tempX -= CAMERA.axis.z.x * totalSpeed;
-            tempY -= CAMERA.axis.z.y * totalSpeed;
-            tempZ -= CAMERA.axis.z.z * totalSpeed;
+            tempX -= CAMERA.zAxis.getX() * totalSpeed;
+            tempY -= CAMERA.zAxis.getY() * totalSpeed;
+            tempZ -= CAMERA.zAxis.getZ() * totalSpeed;
         }
 
         if (IMPUT_MANAGER.keyPressed(' ')) {
@@ -237,15 +299,15 @@
         }
 
         if (SPACE3D.in(tempX, tempY, tempZ) && !SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ))) {
-            CAMERA.location.x = tempX;
-            CAMERA.location.y = tempY;
-            CAMERA.location.z = tempZ;
+            CAMERA.location.setX(tempX);
+            CAMERA.location.setY(tempY);
+            CAMERA.location.setZ(tempZ);
         };
 
         if (IMPUT_MANAGER.keyPressed('ArrowLeft')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -totalRotationSpeed));
         if (IMPUT_MANAGER.keyPressed('ArrowRight')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), totalRotationSpeed));
-        if (IMPUT_MANAGER.keyPressed('ArrowUp')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.axis.x, -totalRotationSpeed));
-        if (IMPUT_MANAGER.keyPressed('ArrowDown')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.axis.x, totalRotationSpeed));
+        if (IMPUT_MANAGER.keyPressed('ArrowUp')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), -totalRotationSpeed));
+        if (IMPUT_MANAGER.keyPressed('ArrowDown')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), totalRotationSpeed));
     }
 
     function sleep(timeMS) {
@@ -298,18 +360,15 @@
         try {
             input(CAMERA, SPACE3D);
             statistics(CAMERA, SPACE3D);
-            //gameLogic(CAMERA, SPACE3D);
-            VIEWPORT.updateView(
-                    CAMERA.render(
-                        SPACE3D,
-                        Math.round(VIEWPORT.height * ADAPTATIVE_RENDER_SCALE),
-                        Math.round(VIEWPORT.width * ADAPTATIVE_RENDER_SCALE),
-                        ZOOM,
-                        RENDER_DISTANCE,
-                    ),
-                0,
-                0,
-            );
+
+            await Promise.all([
+                workerStream(rendererWorker1),
+                workerStream(rendererWorker2),
+                workerStream(rendererWorker3),
+                workerStream(rendererWorker4),
+            ]);
+
+            VIEWPORT.renderBuffer();
         } catch (err) {
             console.log(err);
         }
