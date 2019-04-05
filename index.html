@@ -127,25 +127,25 @@
     }
 
     const rendererWorker1 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker1.postMessage(`${document.location.protocol}//${document.location.host}`);
+    rendererWorker1.postMessage(document.location.href.replace('index.html', ''));
     worker1reponded = false;
     worker1Response = () => {}
     rendererWorker1.addEventListener('message', worker1Response, false);
 
     const rendererWorker2 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker2.postMessage(`${document.location.protocol}//${document.location.host}`);
+    rendererWorker2.postMessage(document.location.href.replace('index.html', ''));
     worker1reponded = false;
     worker1Response = () => {}
     rendererWorker2.addEventListener('message', worker1Response, false);
 
     const rendererWorker3 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker3.postMessage(`${document.location.protocol}//${document.location.host}`);
+    rendererWorker3.postMessage(document.location.href.replace('index.html', ''));
     worker1reponded = false;
     worker1Response = () => {}
     rendererWorker3.addEventListener('message', worker1Response, false);
 
     const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker4.postMessage(`${document.location.protocol}//${document.location.host}`);
+    rendererWorker4.postMessage(document.location.href.replace('index.html', ''));
     worker1reponded = false;
     worker1Response = () => {}
     rendererWorker4.addEventListener('message', worker1Response, false);
@@ -207,26 +207,27 @@
         rendererWorker3.postMessage(baseWorkerConfig);
         baseWorkerConfig.sy = 1;
         rendererWorker4.postMessage(baseWorkerConfig);
+
+        setTimeout(start, 200);
     });
 
     // Day/Night
     /*
-    const sun = SPACE3D.getGlobalLights()[0];
-    const sunBaseIntensity = sun.intensity;
+    const sun = SPACE3D.getGlobalLight();
+    const sunBaseIntensity = sun.getIntensity();
     const ambientLight = SPACE3D.getAmbientLight();
-    const baseAmbientLightColor = ambientLight.color.getCopy();
-    const ambientLightBaseIntensity = ambientLight.intensity;
+    const baseAmbientLightColor = ambientLight.color.get();
+    const ambientLightBaseIntensity = ambientLight.getIntensity();
 
     setInterval(() => {
         const av = Math.abs(sun.direction.y) * 0.25;
         sun.direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 100));
-        sun.direction.normalize();
-        ambientLight.color = (baseAmbientLightColor.getCopy()).blend(new Color(0, 0, 0), 1 - av);
-        if(sun.direction.y < 0) {
-            sun.intensity = Math.abs(sun.direction.y) * 0.75
+        ambientLight.color.set((baseAmbientLightColor.getCopy()).blend(new Color(0, 0, 0), 1 - av));
+        if(sun.direction.getY() < 0) {
+            sun.setIntensity(Math.abs(sun.direction.getY()) * 0.75);
         }
 
-        ambientLight.intensity = Math.max(av, 0.25);        
+        ambientLight.setIntensity(Math.max(av, 0.25));        
     }, 200);
     */
 
