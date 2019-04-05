@@ -5,3 +5,4 @@ const ROTATION_SPEED = 12; // angle/s
 const RENDER_DISTANCE = 256; // units
 const CAMERA_FOV = 90;
 const ADAPTATIVE_RESOLUTION = false;
+const WORKERS = true;
