@@ -150,7 +150,7 @@
     worker1Response = () => {}
     rendererWorker4.addEventListener('message', worker1Response, false);
     
-    const SPACE3D = GENERATOR.build(2048, 64, 2048, () => {
+    const SPACE3D = GENERATOR.build(2048, 128, 2048, () => {
         const CAMERAX = SPACE3D.getX() / 2;
         const CAMERAZ = SPACE3D.getZ() / 2;
 
@@ -377,6 +377,7 @@
         //end: BODY
         FRAME_TIME = Date.now() - frameStart;
 
+        /*
         if(ADAPTATIVE_RESOLUTION && Math.abs(FPS - TARGET_FPS) > 10) {
             if(FPS >= TARGET_FPS && ADAPTATIVE_RENDER_SCALE >= 1) {
                 await sleep(TARGET_FRAME_TIME - FRAME_TIME);
@@ -386,6 +387,7 @@
                 ADAPTATIVE_RENDER_SCALE = Math.max(ADAPTATIVE_RENDER_SCALE - 0.05, 0.1);
             }
         }
+        */
 
         FRAME_DURATION = Date.now() - frameStart;
         FPS = Math.round(1000 / FRAME_DURATION);
