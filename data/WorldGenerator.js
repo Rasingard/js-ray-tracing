@@ -17,7 +17,7 @@ class WorldGenerator {
             const m2 = _3DSPACE.addMaterial(new Color(125, 125, 125), t5, t5, t5);
             const m3 = _3DSPACE.addMaterial(new Color(120, 177, 76), t1, t4, t3);
             const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
-            const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5);
+            const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 112, 112);
 
             this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
                 // Set ground
@@ -37,7 +37,7 @@ class WorldGenerator {
                 // Set Sea
                 for (let i = 0; i < x; i++) {
                     for (let k = 0; k < z; k++) {
-                        for(let j = 0; j < 3; j++) {
+                        for(let j = 0; j < 52; j++) {
                             if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
                         }
                     }
