@@ -59,6 +59,7 @@
 
     <script src="data/heightMap.js"></script>
     <script src="data/textures.js"></script>
+    <script src="data/sky.js"></script>
 
     <script src="lib/core/Color.js"></script>
     <script src="init.js"></script>
@@ -150,7 +151,9 @@
     worker1Response = () => {}
     rendererWorker4.addEventListener('message', worker1Response, false);
     
-    const SPACE3D = GENERATOR.build(2048, 64, 2048, () => {
+    const SPACE3D = GENERATOR.build(2048, 64, 2048, (skyData) => {
+        CAMERA.setSky(skyData);
+
         const CAMERAX = SPACE3D.getX() / 2;
         const CAMERAZ = SPACE3D.getZ() / 2;
 
@@ -197,6 +200,7 @@
             renderDistance: RENDER_DISTANCE,
             sx: 0,
             sy: 0,
+            sky: skyData.buffer,
         };
 
         rendererWorker1.postMessage(baseWorkerConfig);

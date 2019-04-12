@@ -17,7 +17,7 @@ class WorldGenerator {
             const m2 = _3DSPACE.addMaterial(new Color(125, 125, 125), t5, t5, t5);
             const m3 = _3DSPACE.addMaterial(new Color(120, 177, 76), t1, t4, t3);
             const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
-            const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 185, 185);
+            const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 185, 210);
 
             this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
                 // Set ground
@@ -37,13 +37,15 @@ class WorldGenerator {
                 // Set Sea
                 for (let i = 0; i < x; i++) {
                     for (let k = 0; k < z; k++) {
-                        for(let j = 0; j < 32; j++) {
+                        for(let j = 0; j < 22; j++) {
                             if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
                         }
                     }
                 }
     
-                if(ready) ready();
+                this.loadImage(SKY_BASE64, (skydata) => {
+                    if(ready) ready(this.imageDataToSharedBuffer(skydata));
+                });
             });
         });
         
@@ -61,6 +63,25 @@ class WorldGenerator {
             callback(context.getImageData(0, 0, canvas.width, canvas.height));
         }
         image.src = image64;
+    }
+
+    imageDataToSharedBuffer(imageData) {
+        const buffer = new SharedArrayBuffer(4 + (imageData.height * imageData.width * 3));
+        const tempView = new DataView(buffer);
+        tempView.setUint16(0, imageData.height);
+        tempView.setUint16(2, imageData.width);
+        const bufferView = new Uint8ClampedArray(buffer, 4);
+
+        let countIndex = 0;
+        for(let i = 0; i < imageData.data.length; i += 4) {
+            bufferView[countIndex * 3]          = imageData.data[i];
+            bufferView[(countIndex * 3) + 1]    = imageData.data[i + 1];
+            bufferView[(countIndex * 3) + 2]    = imageData.data[i + 2];
+
+            countIndex++;
+        }
+
+        return tempView;
     }
 
     getTyleData(imageData, ix, iy, tileSize) {
