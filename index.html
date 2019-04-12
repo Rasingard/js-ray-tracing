@@ -360,18 +360,27 @@
     async function start() {
         if (IMPUT_MANAGER.keyPressed('Escape')) return;
 
+        workerStream(rendererWorker1);
+        workerStream(rendererWorker2);
+        workerStream(rendererWorker3);
+        workerStream(rendererWorker4);
+
         const frameStart = Date.now();
         //start: BODY
         try {
             input(CAMERA, SPACE3D);
             statistics(CAMERA, SPACE3D);
 
+            /*
             await Promise.all([
                 workerStream(rendererWorker1),
                 workerStream(rendererWorker2),
                 workerStream(rendererWorker3),
                 workerStream(rendererWorker4),
             ]);
+            */
+           
+            await sleep(33);
 
             VIEWPORT.renderBuffer();
         } catch (err) {
