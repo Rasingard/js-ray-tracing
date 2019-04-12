@@ -135,23 +135,14 @@
 
     const rendererWorker2 = BUILD_WORKER(RENDERER_WORKER);
     rendererWorker2.postMessage(document.location.href.replace('index.html', ''));
-    worker1reponded = false;
-    worker1Response = () => {}
-    rendererWorker2.addEventListener('message', worker1Response, false);
 
     const rendererWorker3 = BUILD_WORKER(RENDERER_WORKER);
     rendererWorker3.postMessage(document.location.href.replace('index.html', ''));
-    worker1reponded = false;
-    worker1Response = () => {}
-    rendererWorker3.addEventListener('message', worker1Response, false);
 
     const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
     rendererWorker4.postMessage(document.location.href.replace('index.html', ''));
-    worker1reponded = false;
-    worker1Response = () => {}
-    rendererWorker4.addEventListener('message', worker1Response, false);
     
-    const SPACE3D = GENERATOR.build(2048, 64, 2048, (skyData) => {
+    const SPACE3D = GENERATOR.build(1024, 128, 1024, (skyData) => {
         CAMERA.setSky(skyData);
 
         const CAMERAX = SPACE3D.getX() / 2;
