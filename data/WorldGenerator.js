@@ -5,46 +5,49 @@ class WorldGenerator {
     build(x, y, z, ready) {
         const _3DSPACE = new Map(x, y, z);
 
-        this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
+        this.loadImage(WATER_BUMP_BASE64, (waterBump) => {
+            this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
             
-            const t1 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
-            const t2 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 1, 16));
-            const t3 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 2, 16));
-            const t4 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 3, 16));
-            const t5 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 12, 14, 16));
-
-            const m1 = _3DSPACE.addMaterial(new Color(0, 0, 0), t5, t5, t5);
-            const m2 = _3DSPACE.addMaterial(new Color(125, 125, 125), t5, t5, t5);
-            const m3 = _3DSPACE.addMaterial(new Color(120, 177, 76), t1, t4, t3);
-            const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
-            const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 185, 210);
-
-            this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
-                // Set ground
-                for (let i = 0; i < x; i++) {
-                    for (let k = 0; k < z; k++) {                        
-                        const height = imageData.data[((k*imageData.width + i) * 4)] / 2;
-                        for(let j = 0; j < height; j++) {
-                            if(j > height - 2) {
-                                _3DSPACE.setAt(i,j,k, m2);
-                            } else {
-                                _3DSPACE.setAt(i,j,k, m3);
+                const t1 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
+                const t2 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 1, 16));
+                const t3 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 2, 16));
+                const t4 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 3, 16));
+                // const t5 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 12, 14, 16));
+                const t5 = _3DSPACE.addTexture(this.getTyleBuffer(waterBump, 0, 0, 512));
+    
+                const m1 = _3DSPACE.addMaterial(new Color(0, 0, 0), t5, t5, t5);
+                const m2 = _3DSPACE.addMaterial(new Color(125, 125, 125), t5, t5, t5);
+                const m3 = _3DSPACE.addMaterial(new Color(120, 177, 76), t1, t4, t3);
+                const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
+                const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 64, 200);
+    
+                this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
+                    // Set ground
+                    for (let i = 0; i < x; i++) {
+                        for (let k = 0; k < z; k++) {                        
+                            const height = imageData.data[((k*imageData.width + i) * 4)] / 2;
+                            for(let j = 0; j < height; j++) {
+                                if(j > height - 2) {
+                                    _3DSPACE.setAt(i,j,k, m2);
+                                } else {
+                                    _3DSPACE.setAt(i,j,k, m3);
+                                }
                             }
                         }
                     }
-                }
-
-                // Set Sea
-                for (let i = 0; i < x; i++) {
-                    for (let k = 0; k < z; k++) {
-                        for(let j = 0; j < 22; j++) {
-                            if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
+    
+                    // Set Sea
+                    for (let i = 0; i < x; i++) {
+                        for (let k = 0; k < z; k++) {
+                            for(let j = 0; j < 22; j++) {
+                                if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
+                            }
                         }
                     }
-                }
-    
-                this.loadImage(SKY_BASE64, (skydata) => {
-                    if(ready) ready(this.imageDataToSharedBuffer(skydata));
+        
+                    this.loadImage(SKY_BASE64, (skydata) => {
+                        if(ready) ready(this.imageDataToSharedBuffer(skydata));
+                    });
                 });
             });
         });
