@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <style>
+                html,
+                body {
+                    padding: 0;
+                    margin: 0;
+                    background-color: rgb(49, 49, 49);
+                    height: 100%;
+                    widows: 100%;
+                }
+        </style>
+    </head>
+
+    <body>
+        
+    </body>
+
+</html>
+
+<script>
+    (() => {
+        const canvas = document.createElement('canvas');
+        canvas.height = 250;
+        canvas.width = 400;
+        document.body.appendChild(canvas);
+
+        const gl = canvas.getContext('webgl');
+
+        if(gl === null) {
+            alert("WebGL not supported!");
+            return;
+        };
+
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    })();
+</script>

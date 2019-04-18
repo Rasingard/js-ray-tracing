@@ -104,7 +104,7 @@ class WorldGenerator {
         return tileData;
     }
 
-    getTyleBuffer(imageData, ix, iy, tileSize) {
+    getTyleBuffer(imageData, ix, iy, tileSize, fn) {
         const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize * 4));
         (new DataView(buffer)).setUint16(0, tileSize); // set image size
         const tileData = new Uint8ClampedArray(buffer, 2);
@@ -114,10 +114,26 @@ class WorldGenerator {
             for(let y = 0; y < tileSize; y++) {
                 oi = Math.floor(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
                 ci = Math.floor((y * tileSize + x) * 4);
-                tileData[ci] = imageData.data[oi];
-                tileData[ci + 1] = imageData.data[oi + 1];
-                tileData[ci + 2] = imageData.data[oi + 2];
-                tileData[ci + 3] = imageData.data[oi + 3];
+
+                if(fn) {
+                    const color = fn(
+                        new Color(
+                            imageData.data[oi],
+                            imageData.data[oi + 1],
+                            imageData.data[oi + 2],
+                        )
+                    );
+                    
+                    tileData[ci] = color.r;
+                    tileData[ci + 1] = color.g;
+                    tileData[ci + 2] = color.b;
+                    tileData[ci + 3] = imageData.data[oi + 3];
+                } else {
+                    tileData[ci] = imageData.data[oi];
+                    tileData[ci + 1] = imageData.data[oi + 1];
+                    tileData[ci + 2] = imageData.data[oi + 2];
+                    tileData[ci + 3] = imageData.data[oi + 3];
+                }
             }
         }
 
