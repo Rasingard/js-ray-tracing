@@ -21,11 +21,11 @@ class WorldGenerator {
                 const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
                 const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 64, 200);
     
-                this.loadImage(HEIGHT_MAP_BASE64, (imageData) => {
+                this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
                     // Set ground
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {                        
-                            const height = imageData.data[((k*imageData.width + i) * 4)] / 2;
+                            const height = imageData.data[((k*imageData.width + i) * 4)] / 4;
                             for(let j = 0; j < height; j++) {
                                 if(j > height - 2) {
                                     _3DSPACE.setAt(i,j,k, m2);
@@ -39,7 +39,7 @@ class WorldGenerator {
                     // Set Sea
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {
-                            for(let j = 0; j < 22; j++) {
+                            for(let j = 0; j < 2; j++) {
                                 if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
                             }
                         }
@@ -92,8 +92,8 @@ class WorldGenerator {
         let oi, ci;
         for(let x = 0; x < tileSize; x++) {
             for(let y = 0; y < tileSize; y++) {
-                oi = Math.floor(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
-                ci = Math.floor((y * tileSize + x) * 4);
+                oi = Math.round(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
+                ci = Math.round((y * tileSize + x) * 4);
                 tileData.data[ci] = imageData.data[oi];
                 tileData.data[ci + 1] = imageData.data[oi + 1];
                 tileData.data[ci + 2] = imageData.data[oi + 2];
@@ -112,8 +112,8 @@ class WorldGenerator {
         let oi, ci;
         for(let x = 0; x < tileSize; x++) {
             for(let y = 0; y < tileSize; y++) {
-                oi = Math.floor(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
-                ci = Math.floor((y * tileSize + x) * 4);
+                oi = Math.round(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
+                ci = Math.round((y * tileSize + x) * 4);
 
                 if(fn) {
                     const color = fn(
