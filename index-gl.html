@@ -21,6 +21,34 @@
 </html>
 
 <script>
+    function getShader(gl, id) {
+        let shaderScript, theSource, currentChild, shader;
+
+        shaderScript = document.getElementById(id);
+
+        if(!shaderScript) return null;
+
+        theSource = "";
+        currentChild = shaderScript.firstChild;
+
+        while(currentChild) {
+            if(currentChild.nodeType == currentChild.TEXT_NODE) {
+                theSource += currentChild.textContent;
+            }
+
+            currentChild = currentChild.nextSibling;
+        }
+
+        if(shaderScript.type == "x-shader/x-fragment") shader = gl.createShader(gl.FRAGMENT_SHADER);
+        else if (shaderScript.type == "x-shader/x-vertex") shader = gl.createShader(gl.VERTEX_SHADER);
+        else return null;
+    }
+
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-fs");
+    }
+
     (() => {
         const canvas = document.createElement('canvas');
         canvas.height = 250;

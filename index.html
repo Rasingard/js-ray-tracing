@@ -143,7 +143,7 @@
     const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
     rendererWorker4.postMessage(document.location.href.replace('index.html', ''));
     
-    const SPACE3D = GENERATOR.build(2048, 64, 2048, (skyData) => {
+    const SPACE3D = GENERATOR.build(2048, 128, 2048, (skyData) => {
         CAMERA.setSky(skyData);
 
         const CAMERAX = SPACE3D.getX() / 2;

@@ -25,7 +25,7 @@ class WorldGenerator {
                     // Set ground
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {                        
-                            const height = imageData.data[((k*imageData.width + i) * 4)] / 4;
+                            const height = imageData.data[((k*imageData.width + i) * 4)] / 2;
                             for(let j = 0; j < height; j++) {
                                 if(j > height - 2) {
                                     _3DSPACE.setAt(i,j,k, m2);
@@ -39,7 +39,7 @@ class WorldGenerator {
                     // Set Sea
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {
-                            for(let j = 0; j < 2; j++) {
+                            for(let j = 0; j < 12; j++) {
                                 if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
                             }
                         }
