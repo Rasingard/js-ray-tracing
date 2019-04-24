@@ -236,6 +236,7 @@
 
     function statistics(camera, space) {
         const spaceScale = space.getDimensions();
+        const target = space.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
         document.getElementById('logData').innerHTML = `
             <span>FPS: ${FPS} FT: ${FRAME_TIME} FD: ${FRAME_DURATION}</span>
             <span>CAM x: ${camera.location.getX().toFixed(2)} y: ${camera.location.getY().toFixed(2)} z: ${camera.location.getZ().toFixed(2)}</span>
@@ -244,7 +245,7 @@
         `;
 
         document.getElementById('viewData').innerHTML = `
-            <span>RS: ${ADAPTATIVE_RENDER_SCALE.toFixed(2)}</span>
+            <span>DISTANCE: ${target ? target.getTargetDistance().toFixed(2) : '?'}
             <span>H: ${window.innerHeight}</span>
             <span>W: ${window.innerWidth}</span>
         `;
@@ -311,41 +312,8 @@
         return new Promise(resolve => setTimeout(resolve, timeMS));
     }
 
-    let lastLocation = null;
-    let addPressed = false;
-    const materialIndex = 0;
-    let currentMaterial = materialIndex;
     function gameLogic(camera, map) {
-        if(lastLocation) map.setAt(
-            lastLocation.getFaceVoxel().x,
-            lastLocation.getFaceVoxel().y,
-            lastLocation.getFaceVoxel().z,
-            false
-        );
-
-        if(addPressed && lastLocation) {
-            addPressed = false;
-            
-            map.setAt(
-                lastLocation.getFaceVoxel().x,
-                lastLocation.getFaceVoxel().y,
-                lastLocation.getFaceVoxel().z,
-                currentMaterial
-            );
-        }
-        
-        lastLocation = map.rayTrace(camera.location, camera.axis.z, RENDER_DISTANCE);
-
-        if(lastLocation) {
-            Point.distance(camera.location, lastLocation.getTarget());
-
-            map.setAt(
-                lastLocation.getFaceVoxel().x,
-                lastLocation.getFaceVoxel().y,
-                lastLocation.getFaceVoxel().z,
-                materialIndex
-            )
-        };
+        map.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
     }
 
     let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
@@ -362,16 +330,7 @@
         try {
             input(CAMERA, SPACE3D);
             statistics(CAMERA, SPACE3D);
-
-            /*
-            await Promise.all([
-                workerStream(rendererWorker1),
-                workerStream(rendererWorker2),
-                workerStream(rendererWorker3),
-                workerStream(rendererWorker4),
-            ]);
-            */
-           
+            gameLogic(CAMERA, SPACE3D);
             await sleep(33);
 
             VIEWPORT.renderBuffer();

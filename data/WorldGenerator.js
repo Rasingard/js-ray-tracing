@@ -12,14 +12,13 @@ class WorldGenerator {
                 const t2 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 1, 16));
                 const t3 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 2, 16));
                 const t4 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 3, 16));
-                // const t5 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 12, 14, 16));
                 const t5 = _3DSPACE.addTexture(this.getTyleBuffer(waterBump, 0, 0, 512));
     
                 const m1 = _3DSPACE.addMaterial(new Color(0, 0, 0), t5, t5, t5);
                 const m2 = _3DSPACE.addMaterial(new Color(125, 125, 125), t5, t5, t5);
                 const m3 = _3DSPACE.addMaterial(new Color(120, 177, 76), t1, t4, t3);
                 const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
-                const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 64, 200);
+                const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 64, 180);
     
                 this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
                     // Set ground
