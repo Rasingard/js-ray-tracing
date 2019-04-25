@@ -58,6 +58,7 @@
     </style>
 
     <script src="lib/core/Color.js"></script>
+    <script src="data/utils.js"></script>
     <script src="data/waterBump.js"></script>
     <script src="data/heightMap.js"></script>
     <script src="data/textures.js"></script>
@@ -104,259 +105,276 @@
     <div id="logData"></div>
     <div id="viewData"></div>
     <div id="cross"></div>
+    <div id="textures" style="display: none;">
+        <img id="terrain" src="data/terrain.png">
+        <img id="height-map" src="data/height-map.jpg">
+        <img id="water-bump" src="data/water-bump.png">
+        <img id="sky" src="data/sky2.jpg">
+    </div>
 </body>
 
 <script>
-    const VIEWPORT = new Viewport();
-    const GENERATOR = new WorldGenerator();
-    const IMPUT_MANAGER = new InputManager();
+    function startBuild() {
+        const VIEWPORT = new Viewport();
+        const GENERATOR = new WorldGenerator();
+        const IMPUT_MANAGER = new InputManager();
 
-    // Create Camera
-    const CAMERA_BUFFER = new SharedArrayBuffer(257);
-    const CAMERA_VIEW = new DataView(CAMERA_BUFFER);
-    const CAMERA = new CameraView(CAMERA_VIEW, CAMERA_FOV);
-    CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
+        // Create Camera
+        const CAMERA_BUFFER = new SharedArrayBuffer(257);
+        const CAMERA_VIEW = new DataView(CAMERA_BUFFER);
+        const CAMERA = new CameraView(CAMERA_VIEW, CAMERA_FOV);
+        CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
 
-    const workerStream = (worker) => {
-        return new Promise((resolve, reject) => {
-            const workerResponse = () => {
-                worker.removeEventListener('message', workerResponse, false);
-                resolve();
+        const workerStream = (worker) => {
+            return new Promise((resolve, reject) => {
+                const workerResponse = () => {
+                    worker.removeEventListener('message', workerResponse, false);
+                    resolve();
+                }
+                worker.addEventListener('message', workerResponse, false);
+                worker.postMessage(true);
+            });
+        }
+
+        const rendererWorker1 = BUILD_WORKER(RENDERER_WORKER);
+        rendererWorker1.postMessage(document.location.href.replace('index.html', ''));
+        worker1reponded = false;
+        worker1Response = () => {}
+        rendererWorker1.addEventListener('message', worker1Response, false);
+
+        const rendererWorker2 = BUILD_WORKER(RENDERER_WORKER);
+        rendererWorker2.postMessage(document.location.href.replace('index.html', ''));
+
+        const rendererWorker3 = BUILD_WORKER(RENDERER_WORKER);
+        rendererWorker3.postMessage(document.location.href.replace('index.html', ''));
+
+        const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
+        rendererWorker4.postMessage(document.location.href.replace('index.html', ''));
+        
+        const SPACE3D = GENERATOR.build(2048, 128, 2048, (skyData) => {
+            CAMERA.setSky(skyData);
+
+            const CAMERAX = SPACE3D.getX() / 2;
+            const CAMERAZ = SPACE3D.getZ() / 2;
+
+            for (let j = 0, lenJ = SPACE3D.getY(); j < lenJ; j++) {
+                if (!SPACE3D.getAt(CAMERAX, j, CAMERAZ)) {
+                    CAMERAY = j + 0.5;
+                    CAMERA.location.setX(CAMERAX);
+                    CAMERA.location.setY(CAMERAY);
+                    CAMERA.location.setZ(CAMERAZ);
+                    break;
+                };
             }
-            worker.addEventListener('message', workerResponse, false);
-            worker.postMessage(true);
+
+            let inputReady = true;
+            window.addEventListener('keydown', (event) => {
+                if (event.key === 'r') start();
+
+                if (event.key === 'Shift') toggleSpeed = !toggleSpeed;
+
+                if (event.key === 'e' && inputReady) { 
+                    addPressed = true;
+                    inputReady = false;
+                    setTimeout(() => {
+                        inputReady = true;
+                    }, 300);
+                };
+
+                if (event.key === 'q' && lastLocation) currentMaterial = lastLocation.getMaterial().index;
+
+                if (event.key === '-') ZOOM = Math.min(ZOOM + 2, 90);
+                if (event.key === '=') ZOOM = Math.max(ZOOM - 2, 10);
+            }, false);
+
+            const baseWorkerConfig = {
+                map: SPACE3D.getBuffers(),
+                camera: { 
+                    camera: CAMERA_BUFFER,
+                    fov: CAMERA_FOV,
+                },
+                viewBuffer: VIEWPORT.getBuffer(),
+                height: VIEWPORT.height,
+                width: VIEWPORT.width,
+                zoom: ZOOM,
+                renderDistance: RENDER_DISTANCE,
+                sx: 0,
+                sy: 0,
+                sky: skyData.buffer,
+            };
+
+            rendererWorker1.postMessage(baseWorkerConfig);
+            baseWorkerConfig.sy = 1;
+            rendererWorker2.postMessage(baseWorkerConfig);
+            baseWorkerConfig.sy = 0;
+            baseWorkerConfig.sx = 1;
+            rendererWorker3.postMessage(baseWorkerConfig);
+            baseWorkerConfig.sy = 1;
+            rendererWorker4.postMessage(baseWorkerConfig);
+
+            setTimeout(start, 200);
         });
-    }
 
-    const rendererWorker1 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker1.postMessage(document.location.href.replace('index.html', ''));
-    worker1reponded = false;
-    worker1Response = () => {}
-    rendererWorker1.addEventListener('message', worker1Response, false);
-
-    const rendererWorker2 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker2.postMessage(document.location.href.replace('index.html', ''));
-
-    const rendererWorker3 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker3.postMessage(document.location.href.replace('index.html', ''));
-
-    const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
-    rendererWorker4.postMessage(document.location.href.replace('index.html', ''));
-    
-    const SPACE3D = GENERATOR.build(2048, 128, 2048, (skyData) => {
-        CAMERA.setSky(skyData);
-
-        const CAMERAX = SPACE3D.getX() / 2;
-        const CAMERAZ = SPACE3D.getZ() / 2;
-
-        for (let j = 0, lenJ = SPACE3D.getY(); j < lenJ; j++) {
-            if (!SPACE3D.getAt(CAMERAX, j, CAMERAZ)) {
-                CAMERAY = j + 0.5;
-                CAMERA.location.setX(CAMERAX);
-                CAMERA.location.setY(CAMERAY);
-                CAMERA.location.setZ(CAMERAZ);
-                break;
-            };
-        }
-
-        let inputReady = true;
-        window.addEventListener('keydown', (event) => {
-            if (event.key === 'r') start();
-
-            if (event.key === 'Shift') toggleSpeed = !toggleSpeed;
-
-            if (event.key === 'e' && inputReady) { 
-                addPressed = true;
-                inputReady = false;
-                setTimeout(() => {
-                    inputReady = true;
-                }, 300);
-            };
-
-            if (event.key === 'q' && lastLocation) currentMaterial = lastLocation.getMaterial().index;
-
-            if (event.key === '-') ZOOM = Math.min(ZOOM + 2, 90);
-            if (event.key === '=') ZOOM = Math.max(ZOOM - 2, 10);
-        }, false);
-
-        const baseWorkerConfig = {
-            map: SPACE3D.getBuffers(),
-            camera: { 
-                camera: CAMERA_BUFFER,
-                fov: CAMERA_FOV,
-            },
-            viewBuffer: VIEWPORT.getBuffer(),
-            height: VIEWPORT.height,
-            width: VIEWPORT.width,
-            zoom: ZOOM,
-            renderDistance: RENDER_DISTANCE,
-            sx: 0,
-            sy: 0,
-            sky: skyData.buffer,
-        };
-
-        rendererWorker1.postMessage(baseWorkerConfig);
-        baseWorkerConfig.sy = 1;
-        rendererWorker2.postMessage(baseWorkerConfig);
-        baseWorkerConfig.sy = 0;
-        baseWorkerConfig.sx = 1;
-        rendererWorker3.postMessage(baseWorkerConfig);
-        baseWorkerConfig.sy = 1;
-        rendererWorker4.postMessage(baseWorkerConfig);
-
-        setTimeout(start, 200);
-    });
-
-    // Day/Night
-    /*
-    const sun = SPACE3D.getGlobalLight();
-    const sunBaseIntensity = sun.getIntensity();
-    const ambientLight = SPACE3D.getAmbientLight();
-    const baseAmbientLightColor = ambientLight.color.get();
-    const ambientLightBaseIntensity = ambientLight.getIntensity();
-
-    setInterval(() => {
-        const av = Math.abs(sun.direction.y) * 0.25;
-        sun.direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 100));
-        ambientLight.color.set((baseAmbientLightColor.getCopy()).blend(new Color(0, 0, 0), 1 - av));
-        if(sun.direction.getY() < 0) {
-            sun.setIntensity(Math.abs(sun.direction.getY()) * 0.75);
-        }
-
-        ambientLight.setIntensity(Math.max(av, 0.25));        
-    }, 200);
-    */
-
-    const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
-    let GAME_TIME = 0;
-    let FPS = 1;
-    let FRAME_TIME = 0;
-    let FRAME_DURATION = 0;
-    let ZOOM = CAMERA_FOV;
-
-    function statistics(camera, space) {
-        const spaceScale = space.getDimensions();
-        const target = space.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
-        document.getElementById('logData').innerHTML = `
-            <span>FPS: ${FPS} FT: ${FRAME_TIME} FD: ${FRAME_DURATION}</span>
-            <span>CAM x: ${camera.location.getX().toFixed(2)} y: ${camera.location.getY().toFixed(2)} z: ${camera.location.getZ().toFixed(2)}</span>
-            <span>VEC: x: ${camera.zAxis.getX().toFixed(2)} y: ${camera.zAxis.getY().toFixed(2)} z: ${camera.zAxis.getZ().toFixed(2)}</span>
-            <span>TIME: ${GAME_TIME}</span>
-        `;
-
-        document.getElementById('viewData').innerHTML = `
-            <span>DISTANCE: ${target ? target.getTargetDistance().toFixed(2) : '?'}
-            <span>H: ${window.innerHeight}</span>
-            <span>W: ${window.innerWidth}</span>
-        `;
-    }
-
-    let toggleSpeed = false;
-    function input() {
-        let totalSpeed = CAMERA_SPEED * FRAME_DURATION / 1000;
-        let totalRotationSpeed = ROTATION_SPEED * FRAME_DURATION / 1000;
-
-        if(toggleSpeed) {
-            totalSpeed *= 10;
-            totalRotationSpeed *= 10;
-        }
-
-        let tempX = CAMERA.location.getX();
-        let tempY = CAMERA.location.getY();
-        let tempZ = CAMERA.location.getZ();
-
-        if (!IMPUT_MANAGER.keyPressed('a') && IMPUT_MANAGER.keyPressed('d')) {
-            tempX += CAMERA.xAxis.getX() * totalSpeed;
-            tempY += CAMERA.xAxis.getY() * totalSpeed;
-            tempZ += CAMERA.xAxis.getZ() * totalSpeed;
-        }
-
-        if (IMPUT_MANAGER.keyPressed('a') && !IMPUT_MANAGER.keyPressed('d')) {
-            tempX -= CAMERA.xAxis.getX() * totalSpeed;
-            tempY -= CAMERA.xAxis.getY() * totalSpeed;
-            tempZ -= CAMERA.xAxis.getZ() * totalSpeed;
-        }
-
-        if (IMPUT_MANAGER.keyPressed('w')) {
-            tempX += CAMERA.zAxis.getX() * totalSpeed;
-            tempY += CAMERA.zAxis.getY() * totalSpeed;
-            tempZ += CAMERA.zAxis.getZ() * totalSpeed;
-        };
-        if (IMPUT_MANAGER.keyPressed('s')) {
-            tempX -= CAMERA.zAxis.getX() * totalSpeed;
-            tempY -= CAMERA.zAxis.getY() * totalSpeed;
-            tempZ -= CAMERA.zAxis.getZ() * totalSpeed;
-        }
-
-        if (IMPUT_MANAGER.keyPressed(' ')) {
-            tempY += totalSpeed;
-        }
-
-        if (IMPUT_MANAGER.keyPressed('Control')) {
-            tempY -= totalSpeed;
-        }
-
-        if (SPACE3D.in(tempX, tempY, tempZ) && !SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ))) {
-            CAMERA.location.setX(tempX);
-            CAMERA.location.setY(tempY);
-            CAMERA.location.setZ(tempZ);
-        };
-
-        if (IMPUT_MANAGER.keyPressed('ArrowLeft')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -totalRotationSpeed));
-        if (IMPUT_MANAGER.keyPressed('ArrowRight')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), totalRotationSpeed));
-        if (IMPUT_MANAGER.keyPressed('ArrowUp')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), -totalRotationSpeed));
-        if (IMPUT_MANAGER.keyPressed('ArrowDown')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), totalRotationSpeed));
-    }
-
-    function sleep(timeMS) {
-        return new Promise(resolve => setTimeout(resolve, timeMS));
-    }
-
-    function gameLogic(camera, map) {
-        map.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
-    }
-
-    let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
-    async function start() {
-        if (IMPUT_MANAGER.keyPressed('Escape')) return;
-
-        workerStream(rendererWorker1);
-        workerStream(rendererWorker2);
-        workerStream(rendererWorker3);
-        workerStream(rendererWorker4);
-
-        const frameStart = Date.now();
-        //start: BODY
-        try {
-            input(CAMERA, SPACE3D);
-            statistics(CAMERA, SPACE3D);
-            gameLogic(CAMERA, SPACE3D);
-            await sleep(33);
-
-            VIEWPORT.renderBuffer();
-        } catch (err) {
-            console.log(err);
-        }
-
-        //end: BODY
-        FRAME_TIME = Date.now() - frameStart;
-
+        // Day/Night
         /*
-        if(ADAPTATIVE_RESOLUTION && Math.abs(FPS - TARGET_FPS) > 10) {
-            if(FPS >= TARGET_FPS && ADAPTATIVE_RENDER_SCALE >= 1) {
-                await sleep(TARGET_FRAME_TIME - FRAME_TIME);
-            } else if (FPS > TARGET_FPS) {
-                ADAPTATIVE_RENDER_SCALE = Math.min(ADAPTATIVE_RENDER_SCALE + 0.05, 1);
-            } else {
-                ADAPTATIVE_RENDER_SCALE = Math.max(ADAPTATIVE_RENDER_SCALE - 0.05, 0.1);
+        const sun = SPACE3D.getGlobalLight();
+        const sunBaseIntensity = sun.getIntensity();
+        const ambientLight = SPACE3D.getAmbientLight();
+        const baseAmbientLightColor = ambientLight.color.get();
+        const ambientLightBaseIntensity = ambientLight.getIntensity();
+
+        setInterval(() => {
+            const av = Math.abs(sun.direction.y) * 0.25;
+            sun.direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 100));
+            ambientLight.color.set((baseAmbientLightColor.getCopy()).blend(new Color(0, 0, 0), 1 - av));
+            if(sun.direction.getY() < 0) {
+                sun.setIntensity(Math.abs(sun.direction.getY()) * 0.75);
             }
-        }
+
+            ambientLight.setIntensity(Math.max(av, 0.25));        
+        }, 200);
         */
 
-        FRAME_DURATION = Date.now() - frameStart;
-        FPS = Math.round(1000 / FRAME_DURATION);
-        GAME_TIME += FRAME_DURATION; // Update GAME_TIME after frame sleep
-        window.requestAnimationFrame(start);
+        const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
+        let GAME_TIME = 0;
+        let FPS = 1;
+        let FRAME_TIME = 0;
+        let FRAME_DURATION = 0;
+        let ZOOM = CAMERA_FOV;
+
+        function statistics(camera, space) {
+            const spaceScale = space.getDimensions();
+            const target = space.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
+            document.getElementById('logData').innerHTML = `
+                <span>FPS: ${FPS} FT: ${FRAME_TIME} FD: ${FRAME_DURATION}</span>
+                <span>CAM x: ${camera.location.getX().toFixed(2)} y: ${camera.location.getY().toFixed(2)} z: ${camera.location.getZ().toFixed(2)}</span>
+                <span>VEC: x: ${camera.zAxis.getX().toFixed(2)} y: ${camera.zAxis.getY().toFixed(2)} z: ${camera.zAxis.getZ().toFixed(2)}</span>
+                <span>TIME: ${GAME_TIME}</span>
+            `;
+
+            document.getElementById('viewData').innerHTML = `
+                <span>DISTANCE: ${target ? target.getTargetDistance().toFixed(2) : '?'}
+                <span>H: ${window.innerHeight}</span>
+                <span>W: ${window.innerWidth}</span>
+            `;
+        }
+
+        let toggleSpeed = false;
+        function input() {
+            let totalSpeed = CAMERA_SPEED * FRAME_DURATION / 1000;
+            let totalRotationSpeed = ROTATION_SPEED * FRAME_DURATION / 1000;
+
+            if(toggleSpeed) {
+                totalSpeed *= 10;
+                totalRotationSpeed *= 10;
+            }
+
+            let tempX = CAMERA.location.getX();
+            let tempY = CAMERA.location.getY();
+            let tempZ = CAMERA.location.getZ();
+
+            if (!IMPUT_MANAGER.keyPressed('a') && IMPUT_MANAGER.keyPressed('d')) {
+                tempX += CAMERA.xAxis.getX() * totalSpeed;
+                tempY += CAMERA.xAxis.getY() * totalSpeed;
+                tempZ += CAMERA.xAxis.getZ() * totalSpeed;
+            }
+
+            if (IMPUT_MANAGER.keyPressed('a') && !IMPUT_MANAGER.keyPressed('d')) {
+                tempX -= CAMERA.xAxis.getX() * totalSpeed;
+                tempY -= CAMERA.xAxis.getY() * totalSpeed;
+                tempZ -= CAMERA.xAxis.getZ() * totalSpeed;
+            }
+
+            if (IMPUT_MANAGER.keyPressed('w')) {
+                tempX += CAMERA.zAxis.getX() * totalSpeed;
+                tempY += CAMERA.zAxis.getY() * totalSpeed;
+                tempZ += CAMERA.zAxis.getZ() * totalSpeed;
+            };
+            if (IMPUT_MANAGER.keyPressed('s')) {
+                tempX -= CAMERA.zAxis.getX() * totalSpeed;
+                tempY -= CAMERA.zAxis.getY() * totalSpeed;
+                tempZ -= CAMERA.zAxis.getZ() * totalSpeed;
+            }
+
+            if (IMPUT_MANAGER.keyPressed(' ')) {
+                tempY += totalSpeed;
+            }
+
+            if (IMPUT_MANAGER.keyPressed('Control')) {
+                tempY -= totalSpeed;
+            }
+
+            if (SPACE3D.in(tempX, tempY, tempZ) && !SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ))) {
+                CAMERA.location.setX(tempX);
+                CAMERA.location.setY(tempY);
+                CAMERA.location.setZ(tempZ);
+            };
+
+            if (IMPUT_MANAGER.keyPressed('ArrowLeft')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -totalRotationSpeed));
+            if (IMPUT_MANAGER.keyPressed('ArrowRight')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), totalRotationSpeed));
+            if (IMPUT_MANAGER.keyPressed('ArrowUp')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), -totalRotationSpeed));
+            if (IMPUT_MANAGER.keyPressed('ArrowDown')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), totalRotationSpeed));
+        }
+
+        function sleep(timeMS) {
+            return new Promise(resolve => setTimeout(resolve, timeMS));
+        }
+
+        function gameLogic(camera, map) {
+            map.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
+        }
+
+        let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
+        async function start() {
+            if (IMPUT_MANAGER.keyPressed('Escape')) return;
+
+            workerStream(rendererWorker1);
+            workerStream(rendererWorker2);
+            workerStream(rendererWorker3);
+            workerStream(rendererWorker4);
+
+            const frameStart = Date.now();
+            //start: BODY
+            try {
+                input(CAMERA, SPACE3D);
+                statistics(CAMERA, SPACE3D);
+                gameLogic(CAMERA, SPACE3D);
+                await sleep(33);
+
+                VIEWPORT.renderBuffer();
+            } catch (err) {
+                console.log(err);
+            }
+
+            //end: BODY
+            FRAME_TIME = Date.now() - frameStart;
+
+            /*
+            if(ADAPTATIVE_RESOLUTION && Math.abs(FPS - TARGET_FPS) > 10) {
+                if(FPS >= TARGET_FPS && ADAPTATIVE_RENDER_SCALE >= 1) {
+                    await sleep(TARGET_FRAME_TIME - FRAME_TIME);
+                } else if (FPS > TARGET_FPS) {
+                    ADAPTATIVE_RENDER_SCALE = Math.min(ADAPTATIVE_RENDER_SCALE + 0.05, 1);
+                } else {
+                    ADAPTATIVE_RENDER_SCALE = Math.max(ADAPTATIVE_RENDER_SCALE - 0.05, 0.1);
+                }
+            }
+            */
+
+            FRAME_DURATION = Date.now() - frameStart;
+            FPS = Math.round(1000 / FRAME_DURATION);
+            GAME_TIME += FRAME_DURATION; // Update GAME_TIME after frame sleep
+            window.requestAnimationFrame(start);
+        }
+    }
+
+    let imgs = document.images, len = imgs.length, count = 0;
+    [].forEach.call(imgs, (img) => {
+        img.addEventListener('load', counter, false);
+    });
+    function counter() {
+        count++
+        if(count === len) startBuild();
     }
 </script>
 

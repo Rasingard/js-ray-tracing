@@ -2,34 +2,100 @@ class WorldGenerator {
     constructor() {
     }
 
+    ran(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+
     build(x, y, z, ready) {
         const _3DSPACE = new Map(x, y, z);
 
         this.loadImage(WATER_BUMP_BASE64, (waterBump) => {
-            this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
+            this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 128x128
+
+                _3DSPACE.addMaterial(new Color(0, 0, 0));
+                _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
             
-                const t1 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
-                const t2 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 1, 16));
-                const t3 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 2, 16));
-                const t4 = _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 3, 16));
-                const t5 = _3DSPACE.addTexture(this.getTyleBuffer(waterBump, 0, 0, 512));
-    
-                const m1 = _3DSPACE.addMaterial(new Color(0, 0, 0), t5, t5, t5);
-                const m2 = _3DSPACE.addMaterial(new Color(125, 125, 125), t5, t5, t5);
-                const m3 = _3DSPACE.addMaterial(new Color(120, 177, 76), t1, t4, t3);
-                const m4 = _3DSPACE.addMaterial(new Color(125, 125, 125), t2, t2, t2);
-                const m5 = _3DSPACE.addMaterial(new Color(30, 30, 160), t5, t5, t5, 64, 180);
-    
+                const grass = _3DSPACE.addMaterial(
+                    new Color(120, 177, 76),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 3, 0, 16)),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16)),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 2, 0, 16)),
+                );
+
+                const stone = _3DSPACE.addMaterial(
+                    new Color(125, 125, 125),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 1, 0, 16))
+                );
+
+                const water = _3DSPACE.addMaterial(
+                    new Color(30, 30, 160),
+                    //_3DSPACE.addTexture(this.getTyleBuffer(waterBump, 0, 0, 512)),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 14, 13, 16)),
+                    undefined,
+                    undefined,
+                    64,
+                    180
+                );
+
+                const sand = _3DSPACE.addMaterial(
+                    new Color(30, 30, 30),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 2, 1, 16))
+                );
+
+                const snow = _3DSPACE.addMaterial(
+                    new Color(250, 250, 250),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 2, 4, 16))
+                );
+
+                const treeTrunk = _3DSPACE.addMaterial(
+                    new Color(255, 0, 0),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 4, 1, 16)),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 5, 1, 16)),
+                    undefined
+                );
+
+                const adjustColor = new Color(0, 255, 0);
+                const treeLeafs = _3DSPACE.addMaterial(
+                    new Color(0, 0, 255),
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 5, 3, 16, (color) => {
+                        return color.blend(adjustColor.darken(color), 0.5);
+                    }))
+                );
+
                 this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
+                    const seaLevel = 12;
+
                     // Set ground
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {                        
                             const height = imageData.data[((k*imageData.width + i) * 4)] / 2;
-                            for(let j = 0; j < height; j++) {
-                                if(j > height - 2) {
-                                    _3DSPACE.setAt(i,j,k, m2);
-                                } else {
-                                    _3DSPACE.setAt(i,j,k, m3);
+
+                            if(height <= seaLevel) {
+                                for(let j = 0; j < height; j++) {
+                                    if(j > (height - 2)) _3DSPACE.setAt(i, j, k, sand);  
+                                    else _3DSPACE.setAt(i, j, k, stone);
+                                }
+                            } else if (height <= seaLevel * 5) {
+                                for(let j = 0; j < height; j++) {
+                                    if(j > (height - 2)) _3DSPACE.setAt(i, j, k, grass);
+                                    else _3DSPACE.setAt(i, j, k, stone);
+                                }
+                            } else if (height <= seaLevel * 5 + 3) {
+                                for(let j = 0; j < height; j++) {
+                                    const val = this.ran(0, 3);
+                                    if(val > (seaLevel * 5 + 3) - height) _3DSPACE.setAt(i, j, k, stone);
+                                    else _3DSPACE.setAt(i, j, k, grass);
+                                }
+                            } else if (height <= seaLevel * 5 + 6) {
+                                for(let j = 0; j < height; j++) {
+                                    const val = this.ran(0, 3);
+                                    if(val > (seaLevel * 5 + 6) - height) _3DSPACE.setAt(i, j, k, snow);
+                                    else _3DSPACE.setAt(i, j, k, stone);
+                                }
+                            } else {
+                                for(let j = 0; j < height; j++) {
+                                    if(j > (height - 2)) _3DSPACE.setAt(i, j, k, snow);  
+                                    else _3DSPACE.setAt(i, j, k, stone);
                                 }
                             }
                         }
@@ -38,12 +104,52 @@ class WorldGenerator {
                     // Set Sea
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {
-                            for(let j = 0; j < 12; j++) {
-                                if(!_3DSPACE.getAt(i,j,k)) _3DSPACE.setAt(i,j,k, m4);
+                            for(let j = 0; j < seaLevel; j++) {
+                                if(!_3DSPACE.getAt(i,j,k)) {
+                                    _3DSPACE.setAt(i,j,k, water);
+                                };
                             }
                         }
                     }
-        
+
+                    // Set tree
+                    const treeTemplate = [
+                        [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [treeLeafs, treeLeafs, treeLeafs], [treeLeafs, treeLeafs, treeLeafs], [0, 0, 0]],
+                        [[0, treeTrunk, 0], [0, treeTrunk, 0], [0, treeTrunk, 0], [0, treeTrunk, 0], [treeLeafs, treeTrunk, treeLeafs], [treeLeafs, treeLeafs, treeLeafs], [0, treeLeafs, 0]],
+                        [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [treeLeafs, treeLeafs, treeLeafs], [treeLeafs, treeLeafs, treeLeafs], [0, 0, 0]]
+                    ];
+
+                    const vectorDown = new Vector(0, -1, 0);
+                    for (let i = 0; i < 30000; i++) {
+                        const target = _3DSPACE.rayTrace(
+                            new Point(
+                                this.ran(0, 2047),
+                                127,
+                                this.ran(0, 2047)
+                            ),
+                            vectorDown,
+                            2047
+                        );
+            
+                        if(
+                            target &&
+                            target.materialRef === grass &&
+                            this.checkSpace(
+                                target.target.x - 1,
+                                target.target.y,
+                                target.target.z - 1,
+                                3, 6, 3
+                            )
+                        ) {
+                            _3DSPACE.setShape(
+                                target.target.x - 1,
+                                target.target.y,
+                                target.target.z - 1,
+                                treeTemplate
+                            );
+                        }
+                    }
+
                     this.loadImage(SKY_BASE64, (skydata) => {
                         if(ready) ready(this.imageDataToSharedBuffer(skydata));
                     });
@@ -65,6 +171,37 @@ class WorldGenerator {
             callback(context.getImageData(0, 0, canvas.width, canvas.height));
         }
         image.src = image64;
+    }
+
+    checkSpace(map, x, y, z, width, height, depth) {
+        for(let i = x; i < x + width; i++) {
+            for(let j = y; j < y + height; j++) {
+                for(let k = z; k < z + depth; k++) {
+                    if(map.getAt(i, j, k)) return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    getInRange(map, x, y, z, range, fn) {
+        const startx = Math.max(x - range, 0);
+        const starty = Math.max(y - range, 0);
+        const startz = Math.max(z - range, 0);
+
+        const endx = Math.min(x + range, map.getX());
+        const endy = Math.min(y + range, map.getY());
+        const endz = Math.min(z + range, map.getZ());
+
+        for(let i = startx; i < endx; i++) {
+            for(let j = starty; j < endy; j++) {
+                for(let k = startz; k < endz; k++) {
+                    const target = map.getAt(i, j, k);
+                    if(target) fn(target, i, j, k);
+                }
+            }
+        }
     }
 
     imageDataToSharedBuffer(imageData) {
@@ -107,33 +244,38 @@ class WorldGenerator {
         const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize * 4));
         (new DataView(buffer)).setUint16(0, tileSize); // set image size
         const tileData = new Uint8ClampedArray(buffer, 2);
+        
+        let 
+        originI = ((tileSize * iy) * imageData.width + (ix * tileSize)) * 4,
+        targetI = 0;
 
-        let oi, ci;
-        for(let x = 0; x < tileSize; x++) {
-            for(let y = 0; y < tileSize; y++) {
-                oi = Math.round(((y + ix * tileSize) * imageData.width + (x + iy * tileSize)) * 4);
-                ci = Math.round((y * tileSize + x) * 4);
-
+        for(let y = 0; y < tileSize; y++) {
+            for(let x = 0; x < tileSize; x++) {
                 if(fn) {
                     const color = fn(
                         new Color(
-                            imageData.data[oi],
-                            imageData.data[oi + 1],
-                            imageData.data[oi + 2],
+                            imageData.data[originI],
+                            imageData.data[originI + 1],
+                            imageData.data[originI + 2],
                         )
                     );
                     
-                    tileData[ci] = color.r;
-                    tileData[ci + 1] = color.g;
-                    tileData[ci + 2] = color.b;
-                    tileData[ci + 3] = imageData.data[oi + 3];
+                    tileData[targetI] = color.r;
+                    tileData[targetI + 1] = color.g;
+                    tileData[targetI + 2] = color.b;
+                    tileData[targetI + 3] = imageData.data[originI + 3];
                 } else {
-                    tileData[ci] = imageData.data[oi];
-                    tileData[ci + 1] = imageData.data[oi + 1];
-                    tileData[ci + 2] = imageData.data[oi + 2];
-                    tileData[ci + 3] = imageData.data[oi + 3];
+                    tileData[targetI] = imageData.data[originI];
+                    tileData[targetI + 1] = imageData.data[originI + 1];
+                    tileData[targetI + 2] = imageData.data[originI + 2];
+                    tileData[targetI + 3] = imageData.data[originI + 3];
                 }
+
+                originI += 4;
+                targetI += 4;
             }
+            
+            originI += ((imageData.width - tileSize) * 4);
         }
 
         return buffer;
