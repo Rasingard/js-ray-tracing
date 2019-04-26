@@ -9,58 +9,60 @@ class WorldGenerator {
     build(x, y, z, ready) {
         const _3DSPACE = new Map(x, y, z);
 
-        this.loadImage(WATER_BUMP_BASE64, (waterBump) => {
-            this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 128x128
+        this.loadImage(WATER_BUMP_BASE64, (normalsData) => {
+            this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
 
-                _3DSPACE.addMaterial(new Color(0, 0, 0));
+                _3DSPACE.addMaterial({color: new Color(0, 0, 0)});
                 _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
-            
-                const grass = _3DSPACE.addMaterial(
-                    new Color(120, 177, 76),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 3, 0, 16)),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16)),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 2, 0, 16)),
-                );
 
-                const stone = _3DSPACE.addMaterial(
-                    new Color(125, 125, 125),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 1, 0, 16))
-                );
+                const tileSize = 16;
 
-                const water = _3DSPACE.addMaterial(
-                    new Color(30, 30, 160),
-                    //_3DSPACE.addTexture(this.getTyleBuffer(waterBump, 0, 0, 512)),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 14, 13, 16)),
-                    undefined,
-                    undefined,
-                    64,
-                    180
-                );
+                const grass = _3DSPACE.addMaterial({
+                    textureSides: this.addTexture(_3DSPACE, tilesData, 3, 0, tileSize),
+                    textureTop: this.addTexture(_3DSPACE, tilesData, 0, 0, tileSize),
+                    textureDown: this.addTexture(_3DSPACE, tilesData, 2, 0, tileSize),
 
-                const sand = _3DSPACE.addMaterial(
-                    new Color(30, 30, 30),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 2, 1, 16))
-                );
+                    // normalSides: this.addTexture(_3DSPACE, normalsData, 3, 0, tileSize),
+                    // normalTop: this.addTexture(_3DSPACE, normalsData, 2, 0, tileSize),
+                    // normalDown: this.addTexture(_3DSPACE, normalsData, 0, 0, tileSize)
+                });
 
-                const snow = _3DSPACE.addMaterial(
-                    new Color(250, 250, 250),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 2, 4, 16))
-                );
+                const stone = _3DSPACE.addMaterial({
+                    texture: this.addTexture(_3DSPACE, tilesData, 1, 0, tileSize),
+                    // normal: this.addTexture(_3DSPACE, normalsData, 1, 0, tileSize) 
+                });
 
-                const treeTrunk = _3DSPACE.addMaterial(
-                    new Color(255, 0, 0),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 4, 1, 16)),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 5, 1, 16)),
-                    undefined
-                );
+                const water = _3DSPACE.addMaterial({
+                    texture: this.addTexture(_3DSPACE, tilesData, 14, 12, tileSize),
+                    normal: this.addTexture(_3DSPACE, normalsData, 0, 0, 512, (color) => {
+                        return color.blend(new Color(127, 127, 255), 0.75);
+                    }, 0.25),
+                    opacity: 32,
+                    specularity: 200
+                });
+
+                const sand = _3DSPACE.addMaterial({
+                    texture: this.addTexture(_3DSPACE, tilesData, 2, 1, tileSize),
+                    // normal: this.addTexture(_3DSPACE, normalsData, 2, 1, tileSize) 
+                });
+                
+                const snow = _3DSPACE.addMaterial({
+                    texture: this.addTexture(_3DSPACE, tilesData, 2, 4, tileSize),
+                    // normal: this.addTexture(_3DSPACE, normalsData, 2, 4, tileSize) 
+                });
+
+                const treeTrunk = _3DSPACE.addMaterial({
+                    texture: this.addTexture(_3DSPACE, tilesData, 4, 1, tileSize), // 5 , 1 para parte interna
+                    // normal: this.addTexture(_3DSPACE, normalsData, 4, 1, tileSize) 
+                });
 
                 const adjustColor = new Color(0, 255, 0);
-                const treeLeafs = _3DSPACE.addMaterial(
-                    new Color(0, 0, 255),
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 5, 3, 16, (color) => {
+                const treeLeafs = _3DSPACE.addMaterial({
+                    texture: this.addTexture(_3DSPACE, tilesData, 5, 3, tileSize, (color) => {
                         return color.blend(adjustColor.darken(color), 0.5);
-                    }))
-                );
+                    }),
+                    // normal: this.addTexture(_3DSPACE, normalsData, 5, 3, tileSize)
+                });
 
                 this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
                     const seaLevel = 12;
@@ -240,7 +242,22 @@ class WorldGenerator {
         return tileData;
     }
 
-    getTyleBuffer(imageData, ix, iy, tileSize, fn) {
+    scaleImage(image, scale) {
+        const tempCanvas = new OffscreenCanvas(image.width, image.height);
+        const tempContext = tempCanvas.getContext('2d');
+        const newW = Math.floor(image.width * scale);
+        const newH = Math.floor(image.height * scale);
+        tempContext.putImageData(image, 0, 0);
+        tempContext.scale(scale, scale);
+        return tempContext.getImageData(0, 0, newH, newW);
+    }
+
+    getTyleBuffer(img, ix, iy, tileSize, fn, scale) {
+        let imageData = img;
+
+        if(scale) this.scaleImage(img, scale);
+        else imageData = img;
+
         const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize * 4));
         (new DataView(buffer)).setUint16(0, tileSize); // set image size
         const tileData = new Uint8ClampedArray(buffer, 2);
@@ -283,5 +300,9 @@ class WorldGenerator {
 
     getTyleTexture(imageData, ix, iy, tileSize) {
         return new Texture(this.getTyleData(imageData, ix, iy, tileSize));
+    }
+
+    addTexture(map, tileSet, x, y, size, fn, scale) {
+        return map.addTexture(this.getTyleBuffer(tileSet, x, y, size, fn, scale));
     }
 }
