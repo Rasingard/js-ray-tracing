@@ -7,64 +7,64 @@ class WorldGenerator {
     }
 
     build(x, y, z, ready) {
-        const _3DSPACE = new Map(x, y, z);
+        this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
+            const _3DSPACE = new Map(imageData.width, 128, imageData.height);
 
-        this.loadImage(WATER_BUMP_BASE64, (normalsData) => {
-            this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
+            this.loadImage(WATER_BUMP_BASE64, (normalsData) => {
+                this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
 
-                _3DSPACE.addMaterial({color: new Color(0, 0, 0)});
-                _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
+                    _3DSPACE.addMaterial({color: new Color(0, 0, 0)});
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
 
-                const tileSize = 16;
+                    const tileSize = 16;
 
-                const grass = _3DSPACE.addMaterial({
-                    textureSides: this.addTexture(_3DSPACE, tilesData, 3, 0, tileSize),
-                    textureTop: this.addTexture(_3DSPACE, tilesData, 0, 0, tileSize),
-                    textureDown: this.addTexture(_3DSPACE, tilesData, 2, 0, tileSize),
+                    const grass = _3DSPACE.addMaterial({
+                        textureSides: this.addTexture(_3DSPACE, tilesData, 3, 0, tileSize),
+                        textureTop: this.addTexture(_3DSPACE, tilesData, 0, 0, tileSize),
+                        textureDown: this.addTexture(_3DSPACE, tilesData, 2, 0, tileSize),
 
-                    // normalSides: this.addTexture(_3DSPACE, normalsData, 3, 0, tileSize),
-                    // normalTop: this.addTexture(_3DSPACE, normalsData, 2, 0, tileSize),
-                    // normalDown: this.addTexture(_3DSPACE, normalsData, 0, 0, tileSize)
-                });
+                        // normalSides: this.addTexture(_3DSPACE, normalsData, 3, 0, tileSize),
+                        // normalTop: this.addTexture(_3DSPACE, normalsData, 2, 0, tileSize),
+                        // normalDown: this.addTexture(_3DSPACE, normalsData, 0, 0, tileSize)
+                    });
 
-                const stone = _3DSPACE.addMaterial({
-                    texture: this.addTexture(_3DSPACE, tilesData, 1, 0, tileSize),
-                    // normal: this.addTexture(_3DSPACE, normalsData, 1, 0, tileSize) 
-                });
+                    const stone = _3DSPACE.addMaterial({
+                        texture: this.addTexture(_3DSPACE, tilesData, 1, 0, tileSize),
+                        // normal: this.addTexture(_3DSPACE, normalsData, 1, 0, tileSize) 
+                    });
 
-                const water = _3DSPACE.addMaterial({
-                    texture: this.addTexture(_3DSPACE, tilesData, 14, 12, tileSize),
-                    normal: this.addTexture(_3DSPACE, normalsData, 0, 0, 512, (color) => {
-                        return color.blend(new Color(127, 127, 255), 0.75);
-                    }, 0.25),
-                    opacity: 32,
-                    specularity: 200
-                });
+                    const water = _3DSPACE.addMaterial({
+                        texture: this.addTexture(_3DSPACE, tilesData, 14, 12, tileSize),
+                        normal: this.addTexture(_3DSPACE, normalsData, 0, 0, 512, (color) => {
+                            return color.blend(new Color(127, 127, 255), 0.75);
+                        }, 0.25),
+                        opacity: 32,
+                        specularity: 200
+                    });
 
-                const sand = _3DSPACE.addMaterial({
-                    texture: this.addTexture(_3DSPACE, tilesData, 2, 1, tileSize),
-                    // normal: this.addTexture(_3DSPACE, normalsData, 2, 1, tileSize) 
-                });
-                
-                const snow = _3DSPACE.addMaterial({
-                    texture: this.addTexture(_3DSPACE, tilesData, 2, 4, tileSize),
-                    // normal: this.addTexture(_3DSPACE, normalsData, 2, 4, tileSize) 
-                });
+                    const sand = _3DSPACE.addMaterial({
+                        texture: this.addTexture(_3DSPACE, tilesData, 2, 1, tileSize),
+                        // normal: this.addTexture(_3DSPACE, normalsData, 2, 1, tileSize) 
+                    });
+                    
+                    const snow = _3DSPACE.addMaterial({
+                        texture: this.addTexture(_3DSPACE, tilesData, 2, 4, tileSize),
+                        // normal: this.addTexture(_3DSPACE, normalsData, 2, 4, tileSize) 
+                    });
 
-                const treeTrunk = _3DSPACE.addMaterial({
-                    texture: this.addTexture(_3DSPACE, tilesData, 4, 1, tileSize), // 5 , 1 para parte interna
-                    // normal: this.addTexture(_3DSPACE, normalsData, 4, 1, tileSize) 
-                });
+                    const treeTrunk = _3DSPACE.addMaterial({
+                        texture: this.addTexture(_3DSPACE, tilesData, 4, 1, tileSize), // 5 , 1 para parte interna
+                        // normal: this.addTexture(_3DSPACE, normalsData, 4, 1, tileSize) 
+                    });
 
-                const adjustColor = new Color(0, 255, 0);
-                const treeLeafs = _3DSPACE.addMaterial({
-                    texture: this.addTexture(_3DSPACE, tilesData, 5, 3, tileSize, (color) => {
-                        return color.blend(adjustColor.darken(color), 0.5);
-                    }),
-                    // normal: this.addTexture(_3DSPACE, normalsData, 5, 3, tileSize)
-                });
+                    const adjustColor = new Color(0, 255, 0);
+                    const treeLeafs = _3DSPACE.addMaterial({
+                        texture: this.addTexture(_3DSPACE, tilesData, 5, 3, tileSize, (color) => {
+                            return color.blend(adjustColor.darken(color), 0.5);
+                        }),
+                        // normal: this.addTexture(_3DSPACE, normalsData, 5, 3, tileSize)
+                    });
 
-                this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
                     const seaLevel = 12;
 
                     // Set ground
@@ -102,7 +102,7 @@ class WorldGenerator {
                             }
                         }
                     }
-    
+
                     // Set Sea
                     for (let i = 0; i < x; i++) {
                         for (let k = 0; k < z; k++) {
@@ -153,13 +153,11 @@ class WorldGenerator {
                     }
 
                     this.loadImage(SKY_BASE64, (skydata) => {
-                        if(ready) ready(this.imageDataToSharedBuffer(skydata));
+                        if(ready) ready(this.imageDataToSharedBuffer(skydata), _3DSPACE);
                     });
                 });
             });
         });
-        
-        return _3DSPACE;
     }
 
     loadImage(image64, callback) {

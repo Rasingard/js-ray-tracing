@@ -151,7 +151,10 @@
         const rendererWorker4 = BUILD_WORKER(RENDERER_WORKER);
         rendererWorker4.postMessage(document.location.href.replace('index.html', ''));
         
-        const SPACE3D = GENERATOR.build(2048, 128, 2048, (skyData) => {
+        let SPACE3D;
+        
+        GENERATOR.build(2048, 128, 2048, (skyData, world) => {
+            SPACE3D = world;
             CAMERA.setSky(skyData);
 
             const CAMERAX = SPACE3D.getX() / 2;
@@ -302,6 +305,22 @@
 
             if (IMPUT_MANAGER.keyPressed('Control')) {
                 tempY -= totalSpeed;
+            }
+
+            if (IMPUT_MANAGER.keyPressed('2')) {
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 200));
+            }
+
+            if (IMPUT_MANAGER.keyPressed('8')) {
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), -360 / 200));
+            }
+            
+            if (IMPUT_MANAGER.keyPressed('4')) {
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 360 / 200));
+            }
+
+            if (IMPUT_MANAGER.keyPressed('6')) {
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -360 / 200));
             }
 
             if (SPACE3D.in(tempX, tempY, tempZ) && !SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ))) {
