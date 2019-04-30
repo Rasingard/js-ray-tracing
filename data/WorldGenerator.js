@@ -13,10 +13,10 @@ class WorldGenerator {
             this.loadImage(WATER_BUMP_BASE64, (normalsData) => {
                 this.loadImage(TEXTURES_BASE64, (tilesData) => { // Tiles 16x16
 
-                    _3DSPACE.addMaterial({color: new Color(0, 0, 0)});
-                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, 16));
-
                     const tileSize = 16;
+
+                    _3DSPACE.addMaterial({color: new Color(0, 0, 0)});
+                    _3DSPACE.addTexture(this.getTyleBuffer(tilesData, 0, 0, tileSize));
 
                     const grass = _3DSPACE.addMaterial({
                         textureSides: this.addTexture(_3DSPACE, tilesData, 3, 0, tileSize),
@@ -37,7 +37,7 @@ class WorldGenerator {
                         texture: this.addTexture(_3DSPACE, tilesData, 14, 12, tileSize),
                         normal: this.addTexture(_3DSPACE, normalsData, 0, 0, 512, (color) => {
                             return color.blend(new Color(127, 127, 255), 0.75);
-                        }, 0.25),
+                        }, tileSize / 512),
                         opacity: 32,
                         specularity: 200
                     });
@@ -153,7 +153,9 @@ class WorldGenerator {
                     }
 
                     this.loadImage(SKY_BASE64, (skydata) => {
-                        if(ready) ready(this.imageDataToSharedBuffer(skydata), _3DSPACE);
+                        if(ready) ready(this.imageDataToSharedBuffer(skydata, (color) => {
+                            color.blend(AMBIENT_LIGHT.getInverted().multiply(color.getInverted()).invert(), 0.75);
+                        }), _3DSPACE);
                     });
                 });
             });
@@ -204,7 +206,7 @@ class WorldGenerator {
         }
     }
 
-    imageDataToSharedBuffer(imageData) {
+    imageDataToSharedBuffer(imageData, fn) {
         const buffer = new SharedArrayBuffer(4 + (imageData.height * imageData.width * 3));
         const tempView = new DataView(buffer);
         tempView.setUint16(0, imageData.height);
@@ -213,9 +215,23 @@ class WorldGenerator {
 
         let countIndex = 0;
         for(let i = 0; i < imageData.data.length; i += 4) {
-            bufferView[countIndex * 3]          = imageData.data[i];
-            bufferView[(countIndex * 3) + 1]    = imageData.data[i + 1];
-            bufferView[(countIndex * 3) + 2]    = imageData.data[i + 2];
+            if(fn) {
+                let color = new Color(
+                    imageData.data[i],
+                    imageData.data[i + 1],
+                    imageData.data[i + 2],
+                );
+
+                fn(color);
+
+                bufferView[countIndex * 3]          = color.r;
+                bufferView[(countIndex * 3) + 1]    = color.g;
+                bufferView[(countIndex * 3) + 2]    = color.b;
+            } else {
+                bufferView[countIndex * 3]          = imageData.data[i];
+                bufferView[(countIndex * 3) + 1]    = imageData.data[i + 1];
+                bufferView[(countIndex * 3) + 2]    = imageData.data[i + 2];
+            }
 
             countIndex++;
         }
@@ -247,13 +263,13 @@ class WorldGenerator {
         const newH = Math.floor(image.height * scale);
         tempContext.putImageData(image, 0, 0);
         tempContext.scale(scale, scale);
-        return tempContext.getImageData(0, 0, newH, newW);
+        return tempContext.getImageData(0, 0, image.height, image.width);
     }
 
     getTyleBuffer(img, ix, iy, tileSize, fn, scale) {
-        let imageData = img;
+        let imageData;
 
-        if(scale) this.scaleImage(img, scale);
+        if(scale) imageData = this.scaleImage(img, scale);
         else imageData = img;
 
         const buffer = new SharedArrayBuffer(2 + (tileSize * tileSize * 4));
@@ -301,6 +317,10 @@ class WorldGenerator {
     }
 
     addTexture(map, tileSet, x, y, size, fn, scale) {
-        return map.addTexture(this.getTyleBuffer(tileSet, x, y, size, fn, scale));
+        return map.addTexture(
+            TextureView.buildLOD(
+                this.getTyleBuffer(tileSet, x, y, size, fn, scale)
+            )
+        );
     }
 }

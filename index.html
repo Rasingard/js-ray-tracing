@@ -263,6 +263,8 @@
         }
 
         let toggleSpeed = false;
+        const globalY = new Vector(0, 1, 0);
+        const globalX = new Vector(1, 0, 0);
         function input() {
             let totalSpeed = CAMERA_SPEED * FRAME_DURATION / 1000;
             let totalRotationSpeed = ROTATION_SPEED * FRAME_DURATION / 1000;
@@ -307,20 +309,45 @@
                 tempY -= totalSpeed;
             }
 
+            // Ambilight intensity
+            if (IMPUT_MANAGER.keyPressed('9')) {
+                SPACE3D.getAmbientLight().setIntensity(
+                    Math.max(Math.min(SPACE3D.getAmbientLight().getIntensity() + 0.01, 1), 0)
+                );
+            }
+            if (IMPUT_MANAGER.keyPressed('3')) {
+                SPACE3D.getAmbientLight().setIntensity(
+                    Math.max(Math.min(SPACE3D.getAmbientLight().getIntensity() - 0.01, 1), 0)
+                );
+            }
+
+            // GlobalLight intensity
+            if (IMPUT_MANAGER.keyPressed('7')) {
+                SPACE3D.getGlobalLight().setIntensity(
+                    Math.max(Math.min(SPACE3D.getGlobalLight().getIntensity() + 0.01, 1), 0)
+                );
+            }
+            if (IMPUT_MANAGER.keyPressed('1')) {
+                SPACE3D.getGlobalLight().setIntensity(
+                    Math.max(Math.min(SPACE3D.getGlobalLight().getIntensity() - 0.01, 1), 0)
+                );
+            }
+
+            // GlobalLight direction 
             if (IMPUT_MANAGER.keyPressed('2')) {
-                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 360 / 200));
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(globalX, 360 / 200));
             }
 
             if (IMPUT_MANAGER.keyPressed('8')) {
-                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), -360 / 200));
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(globalX, -360 / 200));
             }
             
             if (IMPUT_MANAGER.keyPressed('4')) {
-                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 360 / 200));
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(globalY, 360 / 200));
             }
 
             if (IMPUT_MANAGER.keyPressed('6')) {
-                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -360 / 200));
+                SPACE3D.getGlobalLight().direction.rotate(Quaternion.fromAxisAngle(globalY, -360 / 200));
             }
 
             if (SPACE3D.in(tempX, tempY, tempZ) && !SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ))) {
@@ -329,8 +356,10 @@
                 CAMERA.location.setZ(tempZ);
             };
 
-            if (IMPUT_MANAGER.keyPressed('ArrowLeft')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), -totalRotationSpeed));
-            if (IMPUT_MANAGER.keyPressed('ArrowRight')) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), totalRotationSpeed));
+            SPACE3D.getGlobalLight().direction.get().angleTo(globalY) / Math.PI;
+
+            if (IMPUT_MANAGER.keyPressed('ArrowLeft')) CAMERA.rotate(Quaternion.fromAxisAngle(globalY, -totalRotationSpeed));
+            if (IMPUT_MANAGER.keyPressed('ArrowRight')) CAMERA.rotate(Quaternion.fromAxisAngle(globalY, totalRotationSpeed));
             if (IMPUT_MANAGER.keyPressed('ArrowUp')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), -totalRotationSpeed));
             if (IMPUT_MANAGER.keyPressed('ArrowDown')) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.xAxis.get(), totalRotationSpeed));
         }
