@@ -265,6 +265,15 @@
         let toggleSpeed = false;
         const globalY = new Vector(0, 1, 0);
         const globalX = new Vector(1, 0, 0);
+
+        let mouseTarget;
+        let mouseX = false;
+        let mouseY = false;
+        let mouse2X = false;
+        let mouse2Y = false;
+        let mouse0Hold = false;
+        let mouse2Hold = false;
+
         function input() {
             let totalSpeed = CAMERA_SPEED * FRAME_DURATION / 1000;
             let totalRotationSpeed = ROTATION_SPEED * FRAME_DURATION / 1000;
@@ -277,6 +286,140 @@
             let tempX = CAMERA.location.getX();
             let tempY = CAMERA.location.getY();
             let tempZ = CAMERA.location.getZ();
+
+            if(IMPUT_MANAGER.keyPressed('mouse0')) {
+                const camLocation = CAMERA.location.get();
+
+                if(!mouse0Hold) {
+                    mouseX = VIEWPORT.pointer.x;
+                    mouseY = VIEWPORT.pointer.y;
+
+                    // get relative to screen Target
+                    mouseTarget = SPACE3D.rayTrace(
+                        camLocation,
+                        Vector.fromPoints(
+                            camLocation,
+                            CAMERA.screenToWorld(
+                                VIEWPORT.pointer.x,
+                                VIEWPORT.pointer.y,
+                                VIEWPORT.height,
+                                VIEWPORT.width,
+                            ),
+                        ),
+                        10000,
+                    );
+
+                    mouse0Hold = true;
+                }
+
+                if(mouseTarget) {
+                    let newCamLocation = camLocation.getCopy(),
+                        targetPoint = mouseTarget.getRayIntersectionPoint();
+
+                    // Horizontal rotation matrix
+                    const HRotationM = Quaternion
+                    .fromAxisAngle(globalY, (VIEWPORT.pointer.x - mouseX))
+                    .matrixRotation(targetPoint);
+
+                    // Move camera Horizont...
+                    HRotationM.applyRotation(newCamLocation);
+
+                    // Tangent XAxis to camera
+                    const tanX = globalY.cross( // cross product of GlobalY and ZPointingToCamera (Y = 0) to find XAxis
+                        new Vector(newCamLocation.x - targetPoint.x, 0, newCamLocation.z - targetPoint.z).normalize()
+                    ).normalize(); // Normalize Cross to prevent Y > 0
+
+                    // Vertical rotation matrix
+                    const VRotationM = Quaternion
+                    .fromAxisAngle(tanX, -(VIEWPORT.pointer.y - mouseY))
+                    .matrixRotation(targetPoint);
+
+                    // Move camera Vert...
+                    VRotationM.applyRotation(newCamLocation);
+
+                    // Check camera position
+                    if(
+                        SPACE3D.in(newCamLocation.x, newCamLocation.y, newCamLocation.z) && 
+                        !SPACE3D.getAt(Math.floor(newCamLocation.x), Math.floor(newCamLocation.y), Math.floor(newCamLocation.z))
+                    ) {
+
+                        const cameraZA = CAMERA.zAxis.get().addVector(camLocation);
+                        HRotationM.applyRotation(cameraZA);
+                        VRotationM.applyRotation(cameraZA);
+
+                        const cameraVZ = Vector.fromPoints(newCamLocation, cameraZA);
+                        const cameraVX = tanX.getInverse();
+                        const cameraVY = cameraVZ.cross(cameraVX).normalize();
+
+                        // set vectors back
+                        CAMERA.xAxis.set(cameraVX);
+                        CAMERA.yAxis.set(cameraVY);
+                        CAMERA.zAxis.set(cameraVZ);
+                        
+                        // apply new camera location
+                        tempX = newCamLocation.x;
+                        tempY = newCamLocation.y;
+                        tempZ = newCamLocation.z;
+                    }
+
+                    // update cursor position
+                    mouseX = VIEWPORT.pointer.x;
+                    mouseY = VIEWPORT.pointer.y;
+                }
+            } else {
+                mouse0Hold = false;
+            };
+
+            if(IMPUT_MANAGER.keyPressed('mouseWheelUp') || IMPUT_MANAGER.keyPressed('mouseWheelDown')) {
+                const camLocation = CAMERA.location.get();
+
+                mouseX = VIEWPORT.pointer.x;
+                mouseY = VIEWPORT.pointer.y;
+
+                // get relative to screen Target
+                mouseTarget = SPACE3D.rayTrace(
+                    camLocation,
+                    Vector.fromPoints(
+                        camLocation,
+                        CAMERA.screenToWorld(
+                            VIEWPORT.pointer.x,
+                            VIEWPORT.pointer.y,
+                            VIEWPORT.height,
+                            VIEWPORT.width,
+                        ),
+                    ),
+                    10000,
+                );
+
+                const targetPoint = mouseTarget.getRayIntersectionPoint();
+                const moveV = Vector.fromPoints(camLocation, targetPoint);
+
+                if(IMPUT_MANAGER.keyPressed('mouseWheelUp')) moveV.inverse();
+
+                tempX += moveV.x * 2;
+                tempY += moveV.y * 2;
+                tempZ += moveV.z * 2;
+
+                IMPUT_MANAGER.wheelRelease();
+            }
+
+            if(IMPUT_MANAGER.keyPressed('mouse1')) {
+                if(mouse2Hold) {
+                    const deltaX = CAMERA.xAxis.get().mult((VIEWPORT.pointer.x - mouse2X) / 10).inverse();
+                    const deltaY = CAMERA.yAxis.get().mult((VIEWPORT.pointer.y - mouse2Y) / 10);
+
+                    tempX += deltaX.x + deltaY.x;
+                    tempY += deltaX.y + deltaY.y;
+                    tempZ += deltaX.z + deltaY.z;
+                } else {
+                    mouse2Hold = true;
+                }
+
+                mouse2X = VIEWPORT.pointer.x;
+                mouse2Y = VIEWPORT.pointer.y;
+            } else {
+                mouse2Hold = false;
+            }
 
             if (!IMPUT_MANAGER.keyPressed('a') && IMPUT_MANAGER.keyPressed('d')) {
                 tempX += CAMERA.xAxis.getX() * totalSpeed;
@@ -369,7 +512,21 @@
         }
 
         function gameLogic(camera, map) {
-            map.rayTrace(camera.location.get(), camera.zAxis.get(), 2048);
+            // const camLocation = camera.location.get();
+
+            // const mouseTarget = map.rayTrace(
+            //     camLocation,
+            //     Vector.fromPoints(
+            //         camLocation,
+            //         camera.screenToWorld(
+            //             VIEWPORT.pointer.x,
+            //             VIEWPORT.pointer.y,
+            //             VIEWPORT.height,
+            //             VIEWPORT.width,
+            //         ),
+            //     ),
+            //     10000,
+            // );
         }
 
         let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
