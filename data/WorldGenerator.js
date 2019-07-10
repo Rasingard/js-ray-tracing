@@ -1,5 +1,6 @@
 class WorldGenerator {
     constructor() {
+        this.mapSize = 256;
     }
 
     ran(min, max) {
@@ -7,7 +8,17 @@ class WorldGenerator {
     }
 
     build(x, y, z, ready) {
-        this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
+        //this.loadImage(HEIGHT_MAP3_BASE64, (imageData) => {
+            const noiseSize = this.mapSize * 0.1;
+            const imageData = this.scaleImage(
+                this.mergeImage(
+                    boxBlur(this.scaleImage(this.noise(6, 6, -850, 300), 2), 3, 1), // 300 -> 750 neve
+                    this.noise(12, 12, 0, 64),
+                    (c1, c2) => c2.lighten(c1)
+                ),
+                this.mapSize / 12
+            );
+
             const _3DSPACE = new Map(imageData.width, 128, imageData.height);
 
             this.loadImage(WATER_BUMP_BASE64, (normalsData) => {
@@ -33,11 +44,12 @@ class WorldGenerator {
                         // normal: this.addTexture(_3DSPACE, normalsData, 1, 0, tileSize) 
                     });
 
+                    const defNormal = new Color(127, 127, 255);
                     const water = _3DSPACE.addMaterial({
                         texture: this.addTexture(_3DSPACE, tilesData, 14, 12, tileSize),
                         normal: this.addTexture(_3DSPACE, normalsData, 0, 0, 512, (color) => {
-                            return color.blend(new Color(127, 127, 255), 0.75);
-                        }, tileSize / 512),
+                            return color.blend(defNormal, 0.75);
+                        }),
                         opacity: 32,
                         specularity: 200
                     });
@@ -152,6 +164,19 @@ class WorldGenerator {
                         }
                     }
 
+                    /*
+                    const imageDataTop = this.noise(imageData.height, imageData.width, -750, 300, 100);
+                    const maxHeight = _3DSPACE.getY();
+                    for (let i = 0; i < x; i++) {
+                        for (let k = 0; k < z; k++) {                        
+                            const height = imageDataTop.data[((k*imageDataTop.width + i) * 4)] / 2;
+                            for(let j = 0; j < height; j++) {
+                                _3DSPACE.setAt(i,maxHeight - j,k, stone);
+                            }
+                        }
+                    }
+                    */
+
                     this.loadImage(SKY_BASE64, (skydata) => {
                         if(ready) ready(this.imageDataToSharedBuffer(skydata, (color) => {
                             color.blend(AMBIENT_LIGHT.getInverted().multiply(color.getInverted()).invert(), 0.75);
@@ -159,7 +184,7 @@ class WorldGenerator {
                     });
                 });
             });
-        });
+        // });
     }
 
     loadImage(image64, callback) {
@@ -257,13 +282,16 @@ class WorldGenerator {
     }
 
     scaleImage(image, scale) {
-        const tempCanvas = new OffscreenCanvas(image.width, image.height);
+        const nh = image.height * (scale || 1);
+        const nw = image.width * (scale || 1);
+        const oCa = new OffscreenCanvas(image.width, image.height);
+        const oCo = oCa.getContext('2d');
+        oCo.putImageData(image, 0, 0);
+
+        const tempCanvas = new OffscreenCanvas(nw, nh);
         const tempContext = tempCanvas.getContext('2d');
-        const newW = Math.floor(image.width * scale);
-        const newH = Math.floor(image.height * scale);
-        tempContext.putImageData(image, 0, 0);
-        tempContext.scale(scale, scale);
-        return tempContext.getImageData(0, 0, image.height, image.width);
+        tempContext.drawImage(oCa, 0, 0, image.width, image.height, 0, 0, nw, nh);
+        return tempContext.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
     }
 
     getTyleBuffer(img, ix, iy, tileSize, fn, scale) {
@@ -322,5 +350,55 @@ class WorldGenerator {
                 this.getTyleBuffer(tileSet, x, y, size, fn, scale)
             )
         );
+    }
+
+    noise(height, width, min, max) {
+        const nh = Math.floor(height);
+        const nw = Math.floor(width);
+        const imgData = new ImageData(nh, nw);
+        const minn = min || 0;
+        const minm = max || 255;
+
+        let i, ranVal;
+        for(let x = 0; x < nw; x++) {
+            for(let y = 0; y < nh; y++) {
+                i = ((x + (y * nw)) * 4);
+                ranVal = Math.min(Math.max(this.ran(minn, minm), 0), 255);
+                imgData.data[i]     = ranVal;
+                imgData.data[i + 1] = ranVal;
+                imgData.data[i + 2] = ranVal;
+                imgData.data[i + 3] = 255;
+            }
+        }
+
+        return imgData;
+    }
+
+    mergeImage(img1, img2, fn) {
+        const resultImg = new ImageData(img1.height, img1.width);
+        const mergeOp = fn ? fn : (img1PixelColor, img2PixelColor) => {
+            return img1PixelColor.blend(img2PixelColor, 0.5);
+        }
+        const nh = img1.height;
+        const nw = img1.width;
+
+        let i, pixelColor;
+        for(let x = 0; x < nw; x++) {
+            for(let y = 0; y < nh; y++) {
+                i = (x + (y * nw)) * 4;
+
+                pixelColor = mergeOp(
+                    new Color(img1.data[i], img1.data[i + 1], img1.data[i + 2]),
+                    new Color(img2.data[i], img2.data[i + 1], img2.data[i + 2])
+                );
+
+                resultImg.data[i]     = pixelColor.r;
+                resultImg.data[i + 1] = pixelColor.g;
+                resultImg.data[i + 2] = pixelColor.b;
+                resultImg.data[i + 3] = 255;
+            }
+        }
+
+        return resultImg;
     }
 }

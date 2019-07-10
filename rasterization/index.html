@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+            background-color: rgb(1, 1, 1);
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #logData {
+            font-family: 'Courier New', Courier, monospace;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 99;
+            color: #ccc;
+            font-size: 10px;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        #logData span,
+        #viewData span {
+            width: 50px;
+            background-color: rgba(0,0,0,0.3);
+            padding: 2px;
+        }
+
+        #viewData {
+            font-family: 'Courier New', Courier, monospace;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            z-index: 99;
+            color: #ccc;
+            font-size: 10px;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+
+        #cross {
+            top: 50%;
+            left: 50%;
+            margin-left: -2px;
+            margin-top: -2px;
+            position: fixed;
+            height: 4px;
+            width: 4px;
+            background-color: rgba(0, 255, 0, 0.8);
+            z-index: 99;
+            border-radius: 4px;
+        }
+    </style>
+
+    <script src="data/textures.js"></script>
+
+    <script src="lib/core/BitMaks.js"></script>
+    <script src="lib/core/Color.js"></script>
+    <script src="init.js"></script>
+    <script src="lib/core/Ray.js"></script>
+    <script src="lib/core/Point.js"></script>
+    <script src="lib/core/SpaceObject.js"></script>
+    <script src="lib/core/Vector.js"></script>
+    <script src="lib/core/Quaternion.js"></script>
+    <script src="lib/core/Line.js"></script>
+    <script src="lib/core/Matrix.js"></script>
+    <script src="lib/core/Map.js"></script>
+    <script src="lib/core/Viewport.js"></script>
+    <script src="lib/core/Material.js"></script>
+    <script src="lib/core/Renderer.js"></script>
+    <script src="lib/core/Shader.js"></script>
+    <script src="lib/core/Texture.js"></script>
+    <script src="lib/core/WorldSpace.js"></script>
+
+    <script src="lib/Camera.js"></script>
+    <script src="lib/InputManager.js"></script>
+    <script src="data/WorldGenerator.js"></script>
+</head>
+
+<body>
+    <div id="logData"></div>
+    <div id="viewData"></div>
+    <!--<div id="cross"></div>-->
+</body>
+
+<script>
+    const VIEWPORT = new Viewport();
+    const GENERATOR = new WorldGenerator();
+    const IMPUT_MANAGER = new InputManager();
+
+    window.VIEWPORT = VIEWPORT;
+    window.IMPUT_MANAGER = IMPUT_MANAGER;
+
+    // Create Camera
+    let CAMERA;
+
+    const SPACE3D = GENERATOR.build(256, 256, 256, () => {
+
+        const CAMERAX = SPACE3D.getX() / 2;
+        const CAMERAZ = SPACE3D.getZ() / 2;
+        for (let j = 0, lenJ = SPACE3D.getY(); j < lenJ; j++) {
+            if (!SPACE3D.getAt(CAMERAX, j, CAMERAZ)) {
+                CAMERAY = j + 0.5;
+                CAMERA = new Camera(
+                    SPACE3D,
+                    new Point(CAMERAX, CAMERAY, CAMERAZ),
+                    CAMERA_FOV,
+                );
+                CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), 90));
+                CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(1, 0, 0), 180));
+                break;
+            };
+        }
+
+        let inputReady = true;
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'r') start();
+
+            if (event.key === 'e' && inputReady) { 
+                addPressed = true;
+                inputReady = false;
+                setTimeout(() => {
+                    inputReady = true;
+                }, 300);
+            };
+
+            // if (event.key === 'q' && lastLocation) currentMaterial = lastLocation.getMaterial().index;
+
+            if (event.key === '-') ZOOM = Math.min(ZOOM + 1, 180);
+            if (event.key === '=') ZOOM = Math.max(ZOOM - 1, 10);
+        }, false);
+    });
+
+    const SUN =  Vector.fromPoints(new Point(0, 0, 0), new Point(-3, -2, -3));
+
+    function statistics(camera, space) {
+        const spaceScale = space.getDimensions();
+        document.getElementById('logData').innerHTML = `
+            <span>FPS: ${FPS} FT: ${FRAME_TIME} FD: ${FRAME_DURATION}</span>
+            <span>CAM x: ${camera.location.x.toFixed(2)} y: ${camera.location.y.toFixed(2)} z: ${camera.location.z.toFixed(2)}</span>
+            <span>VEC: x: ${camera.axis.z.x.toFixed(2)} y: ${camera.axis.z.y.toFixed(2)} z: ${camera.axis.z.z.toFixed(2)}</span>
+            <span>TIME: ${GAME_TIME}</span>
+        `;
+
+        document.getElementById('viewData').innerHTML = `
+            <span>RS: ${ADAPTATIVE_RENDER_SCALE.toFixed(2)}</span>
+            <span>H: ${window.innerHeight}</span>
+            <span>W: ${window.innerWidth}</span>
+        `;
+    }
+
+    function input() {
+        let tempX = CAMERA.location.x;
+        let tempY = CAMERA.location.y;
+        let tempZ = CAMERA.location.z;
+
+        let cameraBaseRotationSpeed = ROTATION_SPEED / 200;
+        let cameraBaseSpeed = CAMERA_SPEED / 200;
+
+        const speedUp = IMPUT_MANAGER.keyPressed('shift') / 10;
+        if(speedUp) {
+            cameraBaseSpeed += cameraBaseSpeed * speedUp;
+            cameraBaseRotationSpeed += cameraBaseRotationSpeed * (speedUp / 2);
+        };
+
+        const xMoviment = IMPUT_MANAGER.keyPressed('d') - IMPUT_MANAGER.keyPressed('a');
+        if(xMoviment) {
+            tempX += CAMERA.axis.x.x * xMoviment * cameraBaseSpeed;
+            tempY += CAMERA.axis.x.y * xMoviment * cameraBaseSpeed;
+            tempZ += CAMERA.axis.x.z * xMoviment * cameraBaseSpeed;
+        }
+
+        const zMoviment = IMPUT_MANAGER.keyPressed('w') - IMPUT_MANAGER.keyPressed('s');
+        if(zMoviment) {
+            tempX += CAMERA.axis.z.x * zMoviment * cameraBaseSpeed;
+            tempY += CAMERA.axis.z.y * zMoviment * cameraBaseSpeed;
+            tempZ += CAMERA.axis.z.z * zMoviment * cameraBaseSpeed;
+        }
+
+        const yMoviment = IMPUT_MANAGER.keyPressed(' ') - IMPUT_MANAGER.keyPressed('control');
+        if(yMoviment) {
+            tempY += CAMERA_SPEED / 200 * yMoviment;
+            tempY += CAMERA_SPEED / 200 * yMoviment;
+        }
+
+        const newCameraLocation = SPACE3D.getAt(Math.floor(tempX), Math.floor(tempY), Math.floor(tempZ));
+        if (SPACE3D.in(tempX, tempY, tempZ) && (newCameraLocation === 0 || newCameraLocation === 2 || newCameraLocation === 3)) {
+            CAMERA.location.x = tempX;
+            CAMERA.location.y = tempY;
+            CAMERA.location.z = tempZ;
+        };
+
+        const yAxisRotation = IMPUT_MANAGER.keyPressed('arrowleft') - IMPUT_MANAGER.keyPressed('arrowright');
+        if (yAxisRotation) CAMERA.rotate(Quaternion.fromAxisAngle(new Vector(0, 1, 0), yAxisRotation * cameraBaseRotationSpeed));
+
+        const xAxisRotation = IMPUT_MANAGER.keyPressed('arrowup') - IMPUT_MANAGER.keyPressed('arrowdown');
+        if (xAxisRotation) CAMERA.rotate(Quaternion.fromAxisAngle(CAMERA.axis.x, xAxisRotation * cameraBaseRotationSpeed));
+    }
+
+    function sleep(timeMS) {
+        return new Promise(resolve => setTimeout(resolve, timeMS));
+    }
+
+    let mouseEnabled = true;
+    const materialIndex = 3;
+
+    function gameLogic(camera, map) {
+        const screenX = VIEWPORT.getPointXFromCenter();
+        const screenY = VIEWPORT.getPointYFromCenter();
+        const worldPoint = CAMERA.screenToWorldSpace(VIEWPORT.getPointXFromCenter(), VIEWPORT.getPointYFromCenter(), ZOOM);
+        const cameraPoint = CAMERA.location;
+        const vectorDirection = Vector.fromPoints(cameraPoint, worldPoint);
+
+        const ray = SPACE3D.rayCast(
+            cameraPoint,
+            vectorDirection,
+            1000
+        );
+
+        if(!mouseEnabled) return;
+
+        if(IMPUT_MANAGER.keyActive('mouse0')) {
+            if(ray.target) {
+                const normal = ray.getNormal();
+                const x = Math.floor(ray.targetx + normal.x);
+                const y = Math.floor(ray.targety + normal.y);
+                const z = Math.floor(ray.targetz + normal.z);
+                SPACE3D.setAt(x, y, z, materialIndex);
+                VOXEL_TO_MESH(camera.location.x, camera.location.y, camera.location.z, x, y, z);
+            }
+
+            mouseEnabled = false;
+            setTimeout(() => {
+                mouseEnabled = true;
+            }, 200);
+        }
+
+        if(IMPUT_MANAGER.keyActive('mouse1')) {
+            const screenX = VIEWPORT.getPointXFromCenter();
+            const screenY = VIEWPORT.getPointYFromCenter();
+            const worldPoint = CAMERA.screenToWorldSpace(VIEWPORT.getPointXFromCenter(), VIEWPORT.getPointYFromCenter(), ZOOM);
+            const cameraPoint = CAMERA.location;
+            const vectorDirection = Vector.fromPoints(cameraPoint, worldPoint);
+
+            const target = SPACE3D.rayCast(
+                cameraPoint,
+                vectorDirection,
+            );
+
+            if(target) {
+                SPACE3D.setAt(
+                    Math.floor(target.x),
+                    Math.floor(target.y),
+                    Math.floor(target.z),
+                    0
+                );
+            }
+
+            mouseEnabled = false;
+            setTimeout(() => {
+                mouseEnabled = true;
+            }, 200);
+        }
+    }
+
+    const TARGET_FRAME_TIME = 1000 / TARGET_FPS;
+    let GAME_TIME = 0;
+    let FPS = 1;
+    let FRAME_TIME = 0;
+    let FRAME_DURATION = 0;
+    let ZOOM = CAMERA_FOV;
+    let ADAPTATIVE_RENDER_SCALE = RENDER_SCALE;
+    let CURRENT_CHUNK_I;
+    let VISIBLE_OBJECTS;
+    let RENDER_TRIS = {
+        p: [],
+        t: []
+    };
+
+    function addTris(tris) {
+        const start = RENDER_TRIS.p.length;
+
+        for(let i = 0, len = tris.t.length; i < len; i++) tris.t[i] += start;
+
+        Array.prototype.push.apply(RENDER_TRIS.p, tris.p);
+        Array.prototype.push.apply(RENDER_TRIS.t, tris.t);
+        // RENDER_TRIS.p.concat(tris.p);
+        // RENDER_TRIS.t.concat(tris.t);
+    }
+
+    let _POINTS_COUNT;
+    let _POINTS;
+    let _POLYS_COUNT;
+    let _POLYS;
+
+    function _RESETMESH() {
+        _POINTS_COUNT = 0;
+        _POINTS = new Float32Array(200000);
+        _POLYS_COUNT = 0;
+        _POLYS = new Uint32Array(60000);
+    }
+
+    _RESETMESH();
+
+    function ADD_FACE_MESH(x, y, z, normal) {
+        const _points = new Float32Array([x, y, z, x, y, z, x, y, z, x, y, z]);
+        _POLYS.set([
+            _POINTS_COUNT, _POINTS_COUNT + 1, _POINTS_COUNT + 2, 
+            _POINTS_COUNT + 3, _POINTS_COUNT, _POINTS_COUNT + 2
+        ], _POLYS_COUNT * 3);
+        _POLYS_COUNT += 2;
+
+        if(normal.x) {
+            if(normal.x > 0) {
+                //p0
+                _points[0] += 1;  // x
+                _points[2] += 1;  // z
+                //p1
+                _points[3] += 1;  // x
+                //p2
+                _points[6] += 1;  // x
+                _points[7] += 1;  // y
+                //p3
+                _points[9] += 1;  // x
+                _points[10] += 1; // y
+                _points[11] += 1; // z
+            } else {
+                //p0
+                //p1
+                _points[5] += 1;  // z
+                //p2
+                _points[7] += 1;  // y
+                _points[8] += 1;  // z
+                //p3
+                _points[10] += 1; // y
+            }
+        } else if(normal.y) {
+            if(normal.y > 0) {
+                //p0
+                _points[1] += 1;  // y
+                _points[2] += 1;  // z
+                //p1
+                _points[3] += 1;  // x
+                _points[4] += 1;  // y
+                _points[5] += 1;  // z
+                //p2
+                _points[6] += 1;  // x
+                _points[7] += 1;  // y
+                //p3
+                _points[10] += 1; // y
+            } else {
+                //p0
+                //p1
+                _points[3] += 1;  // x
+                //p2
+                _points[6] += 1;  // x
+                _points[8] += 1;  // z
+                //p3
+                _points[11] += 1; // z
+            }
+        } else {
+            if(normal.z > 0) {
+                //p0
+                _points[2] += 1;  // z
+                //p1
+                _points[3] += 1;  // x
+                _points[5] += 1;  // z
+                //p2
+                _points[6] += 1;  // x
+                _points[7] += 1;  // y
+                _points[8] += 1;  // z
+                //p3
+                _points[10] += 1; // y
+                _points[11] += 1; // z
+            } else {
+                //p0
+                _points[0] += 1;  // x
+                //p1
+                //p2
+                _points[7] += 1;  // y
+                //p3
+                _points[9] += 1;  // x
+                _points[10] += 1; // y
+            }
+        }
+        
+        _POINTS.set(_points, _POINTS_COUNT * 3);
+        _POINTS_COUNT += 4;
+    }
+
+    function UPDATE_MESH_OC(cx, cy, cz) {
+        let currentVoxel;
+        for (let x = cx - RASTER_DISTANCE, lenx = cx + RASTER_DISTANCE; x < lenx; x++) {
+            for (let y = cy - RASTER_DISTANCE, leny = cy + RASTER_DISTANCE; y < leny; y++) {
+                for (let z = cz - RASTER_DISTANCE, lenz = cz + RASTER_DISTANCE; z < lenz; z++) {
+                    currentVoxel = SPACE3D.in(x, y, z) ? SPACE3D.getAt(x, y, z) : null;
+
+                    if(!currentVoxel) continue;
+
+                    const p = 0.01; // precision point
+                    const ip = 1 + p; // precision point
+
+                    const p0Occluded = SPACE3D.occluded(CAMERA.location, new Point(x - p,  y - p, z - p));
+                    const p1Occluded = SPACE3D.occluded(CAMERA.location, new Point(x + ip, y - p, z - p));
+                    const p2Occluded = SPACE3D.occluded(CAMERA.location, new Point(x - p,  y - p, z + ip));
+                    const p3Occluded = SPACE3D.occluded(CAMERA.location, new Point(x + ip, y - p, z + ip));
+
+                    const p4Occluded = SPACE3D.occluded(CAMERA.location, new Point(x - p,  y + ip, z - p));
+                    const p5Occluded = SPACE3D.occluded(CAMERA.location, new Point(x + ip, y + ip, z - p));
+                    const p6Occluded = SPACE3D.occluded(CAMERA.location, new Point(x - p,  y + ip, z + ip));
+                    const p7Occluded = SPACE3D.occluded(CAMERA.location, new Point(x + ip, y + ip, z + ip));
+
+                    // face UP
+                    if(
+                        cy > y
+                        && !SPACE3D.getAt(x, y + 1, z) 
+                        && !(p4Occluded && p5Occluded && p6Occluded && p7Occluded)
+                    ) ADD_FACE_MESH(x, y, z, new Vector(0, 1, 0));
+
+                    // face DOWN
+                    if(
+                        cy <= y - 1  
+                        && !SPACE3D.getAt(x, y - 1, z)
+                        && !(p0Occluded && p1Occluded && p2Occluded && p3Occluded)
+                    ) ADD_FACE_MESH(x, y, z, new Vector(0, -1, 0));
+
+                    // face RIGHT
+                    if(
+                        cx > x
+                        && !SPACE3D.getAt(x + 1, y, z) 
+                        && !(p1Occluded && p3Occluded && p5Occluded && p7Occluded)
+                    ) ADD_FACE_MESH(x, y, z, new Vector(1, 0, 0));
+
+                    // face LEFT
+                    if(
+                        cx <= x - 1
+                        && !SPACE3D.getAt(x - 1, y, z) 
+                        && !(p0Occluded && p2Occluded && p4Occluded && p6Occluded)
+                    ) ADD_FACE_MESH(x, y, z, new Vector(-1, 0, 0));
+
+                    // face FRONT
+                    if(
+                        cz > z
+                        && !SPACE3D.getAt(x, y, z + 1) 
+                        && !(p2Occluded && p3Occluded && p6Occluded && p7Occluded)
+                    ) ADD_FACE_MESH(x, y, z, new Vector(0, 0, 1));
+
+                    // face BACK
+                    if(
+                        cz <= z - 1  
+                        && !SPACE3D.getAt(x, y, z - 1) 
+                        && !(p0Occluded && p1Occluded && p4Occluded && p5Occluded)
+                    ) ADD_FACE_MESH(x, y, z, new Vector(0, 0, -1));
+                }
+            }
+        }
+    }
+
+    function VOXEL_TO_MESH(cx, cy, cz, x, y, z) {
+        const _currentMask = new ByteMask(SPACE3D.getMapAt(x, y, z));
+
+        // Occluded
+        if(_currentMask.bit1) return;
+        // UP
+        if(cy > y && !_currentMask.bit7) ADD_FACE_MESH(x, y, z, new Vector(0, 1, 0));
+        // DOWN
+        if(cy <= y - 1 && !_currentMask.bit2) ADD_FACE_MESH(x, y, z, new Vector(0, -1, 0));
+        // RIGHT
+        if(cx > x && !_currentMask.bit5) ADD_FACE_MESH(x, y, z, new Vector(1, 0, 0));
+        // LEFT
+        if(cx <= x - 1 && !_currentMask.bit4) ADD_FACE_MESH(x, y, z, new Vector(-1, 0, 0));
+        // FRONT
+        if(cz > z && !_currentMask.bit6) ADD_FACE_MESH(x, y, z, new Vector(0, 0, 1));
+        // BACK
+        if(cz <= z - 1 && !_currentMask.bit3) ADD_FACE_MESH(x, y, z, new Vector(0, 0, -1));
+    }
+
+    function UPDATE_MESH(cx, cy, cz) {
+        let currentVoxel;
+        for (let x = cx - RASTER_DISTANCE, lenx = cx + RASTER_DISTANCE; x < lenx; x++) {
+            for (let y = cy - RASTER_DISTANCE, leny = cy + RASTER_DISTANCE; y < leny; y++) {
+                for (let z = cz - RASTER_DISTANCE, lenz = cz + RASTER_DISTANCE; z < lenz; z++) {
+                    currentVoxel = SPACE3D.in(x, y, z) ? SPACE3D.getAt(x, y, z) : null;
+                    if(currentVoxel) VOXEL_TO_MESH(cx, cy, cz, x, y, z);
+                }
+            }
+        }
+    }
+
+    let CAMERAX = 0;
+    let CAMERAY = 0;
+    let CAMERAZ = 0;
+
+    function checkMesh() {
+        const tempcx = Math.floor(CAMERA.location.x);
+        const tempcy = Math.floor(CAMERA.location.y);
+        const tempcz = Math.floor(CAMERA.location.z);
+
+        if(
+            tempcx != CAMERAX ||
+            tempcy != CAMERAY ||
+            tempcz != CAMERAZ
+        ) {
+            CAMERAX = tempcx;
+            CAMERAY = tempcy;
+            CAMERAZ = tempcz;
+            _RESETMESH();
+            UPDATE_MESH(CAMERAX, CAMERAY, CAMERAZ);
+        }
+    }
+
+    async function start() {        
+        if (IMPUT_MANAGER.keyPressed('escape')) return;
+
+        const frameStart = Date.now();
+        //start: BODY
+        try {
+            checkMesh();
+            // RENDER_TRIS.p = [];
+            // RENDER_TRIS.t = [];
+            input(CAMERA, SPACE3D);
+            statistics(CAMERA, SPACE3D);
+            gameLogic(CAMERA, SPACE3D);
+
+            const renderHeight = Math.round(VIEWPORT.height * ADAPTATIVE_RENDER_SCALE);
+            const renderWidth = Math.round(VIEWPORT.width * ADAPTATIVE_RENDER_SCALE);
+
+            // const tempChunkI = SPACE3D.getChunckIndexAt(CAMERA.location);
+            // if(CURRENT_CHUNK_I !== tempChunkI) {
+            //     VISIBLE_OBJECTS = SPACE3D.getVisibleObjects(CAMERA.location);
+            //     CURRENT_CHUNK_I = tempChunkI;
+            // }
+
+            // VIEWPORT.updateView(
+            //         CAMERA.render(
+            //             SPACE3D,
+            //             renderHeight,
+            //             renderWidth,
+            //             ZOOM
+            //         ),
+            //     CAMERA,
+            //     RENDER_TRIS,
+            //     ZOOM
+            // );
+
+            VIEWPORT.raster(
+                SPACE3D,
+                CAMERA,
+                _POINTS.slice(0, _POINTS_COUNT * 3),
+                _POLYS.slice(0, _POLYS_COUNT * 3), 
+                renderWidth,
+                renderHeight
+            );
+        } catch (err) {
+            console.log(err);
+            debugger;
+        }
+
+        //end: BODY
+        FRAME_TIME = Date.now() - frameStart;
+
+        if(ADAPTATIVE_RESOLUTION && FPS > TARGET_FPS) {
+            ADAPTATIVE_RENDER_SCALE = Math.min(ADAPTATIVE_RENDER_SCALE + 0.005, 1);
+        } else if(ADAPTATIVE_RESOLUTION && FPS < TARGET_FPS) {
+            ADAPTATIVE_RENDER_SCALE = Math.max(ADAPTATIVE_RENDER_SCALE - 0.005, 0.1);
+        }
+
+        FRAME_DURATION = Date.now() - frameStart;
+        FPS = Math.round(1000 / FRAME_DURATION);
+        GAME_TIME += FRAME_DURATION; // Update GAME_TIME after frame sleep
+        window.requestAnimationFrame(start);
+    }
+</script>
+
+</html>

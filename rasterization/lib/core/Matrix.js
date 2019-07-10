@@ -128,7 +128,37 @@ class Matrix4 {
         this.getBuffer = () => this.data.buffer;
     }
 
-    static tranformation(origin3D, xAxis, yAxis, zAxis) {
+    getInverse() {
+        const newMatrix = new Matrix4();
+
+        // Transpose X
+        newMatrix.set00(this.get00());
+        newMatrix.set10(this.get01());
+        newMatrix.set20(this.get02());
+        newMatrix.set03(0);
+
+        // Transpose Y
+        newMatrix.set01(this.get10());
+        newMatrix.set11(this.get11());
+        newMatrix.set21(this.get12());
+        newMatrix.set13(0);
+
+        // Transpose Z
+        newMatrix.set02(this.get20());
+        newMatrix.set22(this.get21());
+        newMatrix.set12(this.get22());
+        newMatrix.set23(0);
+        
+        // Invert  Transpose
+        newMatrix.set30(-this.get30());
+        newMatrix.set31(-this.get31());
+        newMatrix.set32(-this.get32());
+        newMatrix.set33(1);
+
+        return newMatrix;
+    }
+
+    static tranformation(xAxis, yAxis, zAxis, origin3D) {
         const newMatrix = new Matrix4();
         
         newMatrix.set3DL0(xAxis);
@@ -136,6 +166,32 @@ class Matrix4 {
         newMatrix.set3DL2(zAxis);
         newMatrix.set3DL3(origin3D);
         newMatrix.set33(1);
+
+        return newMatrix;
+    }
+
+    static invertTransformation(xAxis, yAxis, zAxis, origin3D) {
+        const newMatrix = new Matrix4();
+        
+        newMatrix.set3DC0(xAxis);
+        newMatrix.set3DC1(yAxis);
+        newMatrix.set3DC2(zAxis);
+        newMatrix.set30((-origin3D.x * xAxis.x) +  (-origin3D.y * xAxis.y) + (-origin3D.z * xAxis.z));
+        newMatrix.set31((-origin3D.x * yAxis.x) +  (-origin3D.y * yAxis.y) + (-origin3D.z * yAxis.z));
+        newMatrix.set32((-origin3D.x * zAxis.x) +  (-origin3D.y * zAxis.y) + (-origin3D.z * zAxis.z));
+        newMatrix.set33(1);
+
+        return newMatrix;
+    }
+
+    static perspective(near, far, fovx, fovy) {
+        const newMatrix = new Matrix4();
+
+        newMatrix.set00(Math.atan(fovx / 2));
+        newMatrix.set11(Math.atan(fovy / 2));
+        newMatrix.set22( -((far + near) / (far - near)) );
+        newMatrix.set23( -((2 * near * far) / (far - near) ) );
+        newMatrix.set32( -1);
 
         return newMatrix;
     }

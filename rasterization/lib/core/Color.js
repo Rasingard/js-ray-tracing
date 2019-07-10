@@ -3,21 +3,6 @@ class Color {
         this.r = r;
         this.g = g;
         this.b = b;
-
-        /*
-        color
-        - r - 8bit
-        - g - 8bit
-        - b - 8bit
-        */
-    }
-
-    static sample4(color1, color2, color3, color4) {
-        return new Color(
-            Math.floor((color1.r * 0.25) + (color2.r * 0.25) + (color3.r * 0.25) + (color4.r * 0.25)),
-            Math.floor((color1.g * 0.25) + (color2.g * 0.25) + (color3.g * 0.25) + (color4.g * 0.25)),
-            Math.floor((color1.b * 0.25) + (color2.b * 0.25) + (color3.b * 0.25) + (color4.b * 0.25)),
-        );
     }
 
     getCopy() {
@@ -75,11 +60,11 @@ class Color {
         return this;
     }
 
-    static blendC(t, b, o) { return Math.floor((b * (1 - o)) + (t * o)); }
-    blend(color, opacity) {
-        this.r = Color.blendC(color.r, this.r, opacity);
-        this.g = Color.blendC(color.g, this.g, opacity);
-        this.b = Color.blendC(color.b, this.b, opacity);
+    static blendC(t, b, a) { return Math.round((b * (1 - a)) + (t * a)); }
+    blend(color, a) {
+        this.r = Color.blendC(color.r, this.r, a);
+        this.g = Color.blendC(color.g, this.g, a);
+        this.b = Color.blendC(color.b, this.b, a);
         return this;
     }
 
@@ -107,11 +92,19 @@ class Color {
         return this;
     }
 
-    static multiplyC(t, b) { return Math.floor((t / 255) * (b / 255) * 255); }
+    static multiplyC(t, b) { return Math.round(t * b / 255); }
     multiply(color) {
         this.r = Color.multiplyC(color.r, this.r);
         this.g = Color.multiplyC(color.g, this.g);
         this.b = Color.multiplyC(color.b, this.b);
+        return this;
+    }
+
+    static multiplyCAlpha(t, b, a) { return Math.round(t * (b * a) / 255); }
+    multiplyAlpha(color, a) {
+        this.r = Color.multiplyCAlpha(color.r, this.r, a);
+        this.g = Color.multiplyCAlpha(color.g, this.g, a);
+        this.b = Color.multiplyCAlpha(color.b, this.b, a);
         return this;
     }
 
@@ -123,6 +116,10 @@ class Color {
     }
 
     luminosity() {
-        return (0.299 * this.r) + (0.587 * this.g) + (0.114 * this.b)
+        return (0.299 * this.r) + (0.587 * this.g) + (0.114 * this.b);
+    }
+
+    static black() {
+        return new Color(0, 0, 0);
     }
 }

@@ -57,6 +57,9 @@
         }
     </style>
 
+    <script src="lib/core/Core.js"></script>
+    <script src="lib/core/Image.js"></script>
+    <script src="data/FastBlur.js"></script>
     <script src="lib/core/Color.js"></script>
     <script src="data/utils.js"></script>
     <script src="data/waterBump.js"></script>
@@ -116,6 +119,7 @@
 <script>
     function startBuild() {
         const VIEWPORT = new Viewport();
+        window.VIEWPORT = VIEWPORT;
         const GENERATOR = new WorldGenerator();
         const IMPUT_MANAGER = new InputManager();
 
@@ -581,6 +585,13 @@
         count++
         if(count === len) startBuild();
     }
+
+    const testOc = new Octree(4);
+
+    testOc.setAt(0,0,0, 1);
+    testOc.setAt(3,3,3, 2);
+
+    testOc.getAt(1,1,1);
 </script>
 
 </html>

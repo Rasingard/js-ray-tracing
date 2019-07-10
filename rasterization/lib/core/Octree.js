@@ -1,3 +1,103 @@
+
+
+class PathNode {
+    constructor(node, size, origin, depth, center, index) {
+        this.node = node;
+        this.size = size;
+        this.origin = origin;
+        this.depth = depth;
+        this.center = center;
+        this.index = index;
+    }
+}
+
+class BaseNode {
+    constructor(parent) {
+        this.parent = parent;
+    }
+
+    up(i) {
+        if(i < 4) return this.parent.nodes[i + 4];
+        else return this.parent.up(i - 4);
+    }
+
+    down(i) {
+        if(i < 4) return this.parent.down(i - 4);
+        else return this.parent.nodes[i + 4];
+    }
+
+    left(i) {
+        if(i % 2 === 0) return this.parent.left(i + 1);
+        else return this.parent.nodes[i - 1];
+    }
+
+    right(i) {
+        if(i % 2 !== 0) return this.parent.right(i - 1);
+        else return this.parent.nodes[i + 1];
+    }
+
+    front(i) {
+        if(i === 0 || i === 1 || i === 4 || i === 5) return this.parent.nodes[i + 2];
+        else return this.parent.front(i - 2);
+    }
+
+    back(i) {
+        if(i === 0 || i === 1 || i === 4 || i === 5) return this.parent.back(i - 2);
+        else return this.parent.nodes[i + 2];
+    }
+
+    getIndex() {
+        return this.parent.nodes.indexOf(this);
+    }
+}
+
+class Root {
+    constructor() {
+        this.leaf = false;
+        this.nodes = new Array(8);
+    }
+
+    get(i) { return this.nodes[i]; }
+    add(i, material) { return this.nodes[i] = new Node(this, material); }
+    remove(i) { this.nodes[i] = undefined; }
+
+    up(i) { return false; }
+    down(i) { return false; }
+    left(i) { return false; }
+    right(i) { return false; }
+    front(i) { return false; }
+    back(i) { return false; }
+    getIndex() { return false; }
+}
+
+class Node extends BaseNode {
+    constructor(parent, material) {
+        super(parent);
+        this.material = material;
+        this.leaf = true;
+        this.nodes = undefined;
+    }
+
+    get(i) { return this.nodes[i]; }
+
+    add(i, material) {
+        if(!this.children) {
+            this.nodes = new Array(8);
+            this.leaf = false;
+        } else {
+            // @TODO 
+        }
+        return this.nodes[i] = new Node(this, material);
+    }
+
+    remove(i) {
+        this.nodes[i] = undefined;
+        this.leaf = this.nodes.some();
+        if(!this.leaf) return;
+        this.nodes = undefined;
+    }
+}
+
 class Octree {
     constructor(size) {
         this.root = new Root();
@@ -70,7 +170,9 @@ class Octree {
                 nextFactor = sizeFactor / 2,
                 center = new Point(nextFactor, nextFactor, nextFactor),
                 origin = new Point(0, 0, 0),
-                index = 0;
+                lastIndex = 0;
+                index = 0,
+                depth = 0;
         
             while(sizeFactor != 1) {
                 index = 0;
@@ -100,15 +202,18 @@ class Octree {
                 } else {
                     center.x -= nextFactor;
                 };
-
-                if(node.get(index)) node = node.get(index);
-                else { // No children at the set position
-                    return new PathNode(node, sizeFactor, origin);
+                
+                if(node.get(index)) { 
+                    node = node.get(index);
+                    depth++;
+                    lastIndex = index;
+                } else { // No children at the set position
+                    return new PathNode(node, sizeFactor, origin, depth, center, lastIndex);
                 };
             }
 
             // Leaf
-            if(node.get(index)) return new PathNode(node.get(index), 1, p);
+            if(node.get(index)) return new PathNode(node.get(index), 1, p, depth + 1, new Point(p.x + 0.5, p.y + 0.5, p.z + 0.5), index);
 
             // Size 2 node - for some reason never happened
             return new PathNode(node, sizeFactor);
@@ -277,144 +382,54 @@ class Octree {
         }
     }
 
-    rayCast(origin, vector, renderDistance) {
+    rayCast(originP3f, directionV3f) {
         // Target Voxel
-        const originNode = this.getNode(origin.x, origin.y, origin.z);
-        const v = new Point(Math.floor(origin.x), Math.floor(origin.y), Math.floor(origin.z));
-
-        const sx = (vector.x < 0) ? -1 : 1;
-        const sy = (vector.y < 0) ? -1 : 1;
-        const sz = (vector.z < 0) ? -1 : 1;
-
-        const dx = (vector.x !== 0) ? Math.abs(1 / vector.x) : Number.MAX_VALUE;
-        const dy = (vector.y !== 0) ? Math.abs(1 / vector.y) : Number.MAX_VALUE;
-        const dz = (vector.z !== 0) ? Math.abs(1 / vector.z) : Number.MAX_VALUE;
-        
-        let 
-        tx = (vector.x !== 0) ? (v.x + sx - origin.x) / vector.x : Number.MAX_VALUE,
-        ty = (vector.y !== 0) ? (v.y + sy - origin.y) / vector.y : Number.MAX_VALUE,
-        tz = (vector.z !== 0) ? (v.z + sz - origin.z) / vector.z : Number.MAX_VALUE,
-        vx, vy, vz, tm;
+        const node = this.getNode(originP3f.x, originP3f.y, originP3f.z);
 
         let
-        mx = (vector.x < 0) ? Math.max(0, v.x - renderDistance) : Math.min(this.getX(), renderDistance + v.x),
-        my = (vector.y < 0) ? Math.max(0, v.y - renderDistance) : Math.min(this.getY(), renderDistance + v.y),
-        mz = (vector.z < 0) ? Math.max(0, v.z - renderDistance) : Math.min(this.getZ(), renderDistance + v.z);
+        voxelSize = node.size;
+        relativeIndex = node.index;
+        targetx = Math.floor(node.origin.x),
+        targety = Math.floor(node.origin.y),
+        targetz = Math.floor(node.origin.z),
+        stepx = (directionV3f.x !== 0) ? Math.abs(1 / directionV3f.x) * voxelSize : Number.MAX_VALUE,
+        stepy = (directionV3f.y !== 0) ? Math.abs(1 / directionV3f.y) * voxelSize : Number.MAX_VALUE,
+        stepz = (directionV3f.z !== 0) ? Math.abs(1 / directionV3f.z) * voxelSize : Number.MAX_VALUE,
+        directionx = (directionV3f.x < 0) ? -1 : 1,
+        directiony = (directionV3f.y < 0) ? -1 : 1,
+        directionz = (directionV3f.z < 0) ? -1 : 1,
+        nextx = (directionV3f.x !== 0) ? ((targetx + (directionV3f.x > 0 ? voxelSize : 0)) - origin.x) / directionV3f.x : Number.MAX_VALUE,
+        nexty = (directionV3f.y !== 0) ? ((targety + (directionV3f.y > 0 ? voxelSize : 0)) - origin.y) / directionV3f.y : Number.MAX_VALUE,
+        nextz = (directionV3f.z !== 0) ? ((targetz + (directionV3f.z > 0 ? voxelSize : 0)) - origin.z) / directionV3f.z : Number.MAX_VALUE,
+        vx = false,
+        vy = false,
+        vz = false;
 
         do {
-            tm = this.getNode(v);
-            if (tm.node instanceof Leaf) {
-                return new RayData(this, origin, vector, v, renderDistance, tm.node.color, sx, sy, sz, tx, ty, tz, dx, dy, dz, vx, vy, vz);
+            vx = (nextx <= nexty && nextx <= nextz);
+            vy = (nexty <= nextx && nexty <= nextz);
+            vz = (nextz <= nextx && nextz <= nexty);
+
+            nextx += vx * stepx;
+            nexty += vy * stepy;
+            nextz += vz * stepz;
+
+            targetx += vx * directionx;
+            targety += vy * directiony;
+            targetz += vz * directionz;
+
+            if(vx) {
+                if(directionV3f.x > 0) node = node.right(relativeIndex);
+                else node = node.left(relativeIndex);
+            } else if(vy) {
+                if(directionV3f.y > 0) node.up(relativeIndex);
+                else node = node.down(relativeIndex);
+            } else {
+                if(directionV3f.z > 0) node = node.front(relativeIndex);
+                else node = node.back(relativeIndex);
             }
-
-            vx = (tx <= ty && tx <= tz);
-            vy = (ty <= tx && ty <= tz);
-            vz = (tz <= tx && tz <= ty);
-
-            tx += vx * dx;
-            ty += vy * dy;
-            tz += vz * dz;
-
-            v.x += vx * sx;
-            v.y += vy * sy;
-            v.z += vz * sz;
-        } while(v.x != mx && v.y != my && mz != v.z);
+        } while(node);
 
         return null;
-    }
-}
-
-class PathNode {
-    constructor(node, size, origin) {
-        this.node = node;
-        this.size = size;
-        this.origin = origin;
-    }
-}
-
-class BaseNode {
-    constructor(parent) {
-        this.parent = parent;
-    }
-
-    up(i) {
-        if(i < 4) return this.parent.up(i);
-        else return this.parent.nodes[i];
-    }
-
-    down(i) {
-        if(i < 4) return this.parent.nodes[i];
-        else return this.parent.down(i);
-    }
-
-    left(i) {
-        if(i % 2 === 0) return this.parent.left(i + 1);
-        else return this.parent.nodes[i - 1];
-    }
-
-    right(i) {
-        if(i % 2 !== 0) return this.parent.right(i - 1);
-        else return this.parent.nodes[i + 1];
-    }
-
-    front(i) {
-        if(i === 0 || i === 1 || i === 4 || i === 5) return this.parent.nodes[i + 2];
-        else return this.parent.front(i - 2);
-    }
-
-    back(i) {
-        if(i === 0 || i === 1 || i === 4 || i === 5) return this.parent.back(i - 2);
-        else return this.parent.nodes[i + 2];
-    }
-
-    getIndex() {
-        return this.parent.nodes.indexOf(this);
-    }
-}
-
-class Root {
-    constructor() {
-        this.leaf = false;
-        this.nodes = new Array(8);
-    }
-
-    get(i) { return this.nodes[i]; }
-    add(i, material) { return this.nodes[i] = new Node(this, material); }
-    remove(i) { this.nodes[i] = undefined; }
-
-    up(i) { return false; }
-    down(i) { return false; }
-    left(i) { return false; }
-    right(i) { return false; }
-    front(i) { return false; }
-    back(i) { return false; }
-    getIndex() { return false; }
-}
-
-class Node extends BaseNode {
-    constructor(parent, material) {
-        super(parent);
-        this.material = material;
-        this.leaf = true;
-        this.nodes = undefined;
-    }
-
-    get(i) { return this.nodes[i]; }
-
-    add(i, material) {
-        if(!this.children) {
-            this.nodes = new Array(8);
-            this.leaf = false;
-        } else {
-            // @TODO 
-        }
-        return this.nodes[i] = new Node(this, material);
-    }
-
-    remove(i) {
-        this.nodes[i] = undefined;
-        this.leaf = this.nodes.some();
-        if(!this.leaf) return;
-        this.nodes = undefined;
     }
 }
