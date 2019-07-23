@@ -1,10 +1,10 @@
-const RENDER_SCALE = 1; // %
+const RENDER_SCALE = 0.11; // %
 const TARGET_FPS = 24;
 const CAMERA_SPEED = 1; // units/s
 const ROTATION_SPEED = 6; // angle/s
-const RENDER_DISTANCE = 64; // units
+const RENDER_DISTANCE = 16; // units
 const CAMERA_FOV = 90;
-const ADAPTATIVE_RESOLUTION = false;
+const ADAPTATIVE_RESOLUTION = true;
 const FOG_COLOR = new Color(0, 0, 0); // new Color(132, 235, 255);
 const SUN_COLOR = new Color(175, 175, 255).blend(Color.black(), 0.85);
 const FOG_DISTANCE = 4;
